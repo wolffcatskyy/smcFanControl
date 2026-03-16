@@ -6,7 +6,6 @@
 //
 //
 
-#define PREF_TEMP_UNIT  @"Unit"
 #define PREF_SELECTION_DEFAULT @"SelDefault"
 #define PREF_AUTOSTART_ENABLED @"AutoStart"
 #define PREF_AUTOMATIC_CHANGE @"AutomaticChange"

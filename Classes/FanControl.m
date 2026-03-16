@@ -24,6 +24,7 @@
 
 #import "FanControl.h"
 #import "MachineDefaults.h"
+#import "SleepWakeFix.h"
 #import <Security/Authorization.h>
 #import <Security/AuthorizationDB.h>
 #import <Security/AuthorizationTags.h>
@@ -115,12 +116,15 @@ NSUserDefaults *defaults;
 	
 
     //load defaults
-    
+
     [DefaultsController setAppliesImmediately:NO];
 
 	mdefaults=[[MachineDefaults alloc] init:nil];
 
     self.machineDefaultsDict=[[NSMutableDictionary alloc] initWithDictionary:[mdefaults get_machine_defaults]];
+
+    // Preferences window foreground handling is done via openPreferences: IBAction
+    // wired from the menu item in init_statusitem (replaces notification approach).
 
     NSMutableArray *favorites = [[NSMutableArray alloc] init];
     
@@ -152,16 +156,16 @@ NSUserDefaults *defaults;
 
 	//load user defaults
 	defaults = [NSUserDefaults standardUserDefaults];
+
 	[defaults registerDefaults:
 		[NSMutableDictionary dictionaryWithObjectsAndKeys:
-			@0, PREF_TEMP_UNIT,
 			@0, PREF_SELECTION_DEFAULT,
 			@NO,PREF_AUTOSTART_ENABLED,
 			@NO,PREF_AUTOMATIC_CHANGE,
 			@0, PREF_BATTERY_SELECTION,
 			@0, PREF_AC_SELECTION,
 			@0, PREF_CHARGING_SELECTION,
-			@0, PREF_MENU_DISPLAYMODE,
+			@2, PREF_MENU_DISPLAYMODE,
             @"TC0D",PREF_TEMPERATURE_SENSOR,
             @0, PREF_NUMBEROF_LAUNCHES,
 			[NSKeyedArchiver archivedDataWithRootObject:[NSColor blackColor] requiringSecureCoding:NO error:nil],PREF_MENU_TEXTCOLOR,
@@ -210,8 +214,8 @@ NSUserDefaults *defaults;
 		[autochange setEnabled:false];
 	}
 	[faqText replaceCharactersInRange:NSMakeRange(0,0) withRTF: [NSData dataWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"F.A.Q" ofType:@"rtf"]]];
-	[self apply_settings:nil controllerindex:[[defaults objectForKey:PREF_SELECTION_DEFAULT] intValue]];
-	[[[[theMenu itemWithTag:1] submenu] itemAtIndex:[[defaults objectForKey:PREF_SELECTION_DEFAULT] intValue]] setState:NSOnState];
+	// Apply saved per-fan RPM settings (replaces old favorites-based apply)
+	[self applyPerFanSettings];
 	[[sliderCell dataCell] setControlSize:NSControlSizeSmall];
 	[self changeMenu:nil];
 	
@@ -256,26 +260,20 @@ NSUserDefaults *defaults;
         [(NSWindow *)mainwindow setTitleVisibility:NSWindowTitleHidden];
     }
 
-    // Hide donate text field left over in compiled nibs (feature removed in CE fork).
-    // The About window (nib id 377) has a text field (nib id 382) at y~59 that
-    // contained the old PayPal/donation message.  The English designable.nib was
-    // cleared to an empty string but localized nibs (DE/FR/NL/ES) still carry the
-    // text.  Walk all loaded windows, find the About panel, and hide the field.
+    // Repurpose the old PayPal donate text field in the About window to show a Ko-fi link.
+    // The About window (nib id 377) has a text field at y~59 that contained the old
+    // PayPal/donation message.  Replace its content with a clickable Ko-fi link.
     for (NSWindow *win in [NSApp windows]) {
         if (win == (NSWindow *)mainwindow) continue;  // skip preferences window
         if (win == (NSWindow *)faqWindow) continue;    // skip FAQ window
         if (win == (NSWindow *)newfavoritewindow) continue;
-        // The About window title varies by locale (About / Acerca de / A propos de /
-        // Informatie) but always contains "smcFanControl".
+        // The About window title varies by locale but always contains "smcFanControl".
         if (![[win title] containsString:@"smcFanControl"]) continue;
         for (NSView *subview in [[win contentView] subviews]) {
             if (![subview isKindOfClass:[NSTextField class]]) continue;
             NSTextField *tf = (NSTextField *)subview;
             NSString *text = [tf stringValue] ?: @"";
             NSString *lower = [text lowercaseString];
-            // Match by donation keywords (covers all localizations) or by
-            // the field's characteristic position (y 50-70, height 40-60)
-            // which is consistent across every lproj nib.
             BOOL hasDonateText = ([lower containsString:@"donat"] ||
                                   [lower containsString:@"paypal"] ||
                                   [lower containsString:@"spende"]);
@@ -285,7 +283,136 @@ NSUserDefaults *defaults;
                                        NSHeight(subview.frame) >= 40 &&
                                        NSHeight(subview.frame) <= 60);
             if (hasDonateText || isEmptyDonateField) {
-                [subview setHidden:YES];
+                // Replace with clickable Ko-fi link
+                [tf setAllowsEditingTextAttributes:YES];
+                [tf setSelectable:YES];
+                NSString *linkText = @"Support smcFanControl CE on Ko-fi";
+                NSMutableAttributedString *attrStr = [[NSMutableAttributedString alloc]
+                    initWithString:linkText];
+                NSURL *kofiURL = [NSURL URLWithString:@"https://ko-fi.com/wolffcatskyy"];
+                [attrStr addAttribute:NSLinkAttributeName value:kofiURL
+                                range:NSMakeRange(0, linkText.length)];
+                [attrStr addAttribute:NSFontAttributeName
+                                value:[NSFont systemFontOfSize:11]
+                                range:NSMakeRange(0, linkText.length)];
+                NSMutableParagraphStyle *pstyle = [[NSMutableParagraphStyle alloc] init];
+                [pstyle setAlignment:NSTextAlignmentCenter];
+                [attrStr addAttribute:NSParagraphStyleAttributeName value:pstyle
+                                range:NSMakeRange(0, linkText.length)];
+                [tf setAttributedStringValue:attrStr];
+                [tf setHidden:NO];
+            }
+        }
+    }
+
+    // Hide the temperature unit preference controls (C/F radio buttons and label).
+    // Temperature unit now comes solely from the system locale — no user override.
+    // The controls are in the preferences window: a label "Temperature unit:" (nib id 537)
+    // and a radio matrix (nib id 538) bound to values.Unit.
+    if (mainwindow) {
+        // Walk the preferences window subview tree to find and hide the controls.
+        NSView *contentView = [(NSWindow *)mainwindow contentView];
+        NSMutableArray *stack = [NSMutableArray arrayWithObject:contentView];
+        while (stack.count > 0) {
+            NSView *v = stack.lastObject;
+            [stack removeLastObject];
+            [stack addObjectsFromArray:v.subviews];
+
+            // Hide "Temperature unit:" label
+            if ([v isKindOfClass:[NSTextField class]]) {
+                NSTextField *tf = (NSTextField *)v;
+                if ([[tf stringValue] containsString:@"Temperature unit"] ||
+                    [[tf stringValue] containsString:@"Temperatur"]) {
+                    [tf setHidden:YES];
+                }
+            }
+            // Hide the C/F radio button matrix bound to values.Unit
+            if ([v isKindOfClass:[NSMatrix class]]) {
+                NSMatrix *matrix = (NSMatrix *)v;
+                NSArray *cells = [matrix cells];
+                if (cells.count == 2) {
+                    NSString *t0 = [[cells objectAtIndex:0] title] ?: @"";
+                    NSString *t1 = [[cells objectAtIndex:1] title] ?: @"";
+                    if ([t0 containsString:@"°C"] && [t1 containsString:@"°F"]) {
+                        [matrix setHidden:YES];
+                    }
+                }
+            }
+        }
+    }
+
+    // Hide favorites UI elements in preferences window (favorites are obsolete in CE).
+    // Walk the view hierarchy and hide: "Favorite:" / "Default" labels, the favorites
+    // popup button, and Add/Remove buttons near the favorites section.
+    if (mainwindow) {
+        NSView *prefContent = [(NSWindow *)mainwindow contentView];
+        NSMutableArray *prefStack = [NSMutableArray arrayWithObject:prefContent];
+        while (prefStack.count > 0) {
+            NSView *v = prefStack.lastObject;
+            [prefStack removeLastObject];
+            [prefStack addObjectsFromArray:v.subviews];
+
+            // Hide labels containing "Favorite" or showing "Default"
+            if ([v isKindOfClass:[NSTextField class]]) {
+                NSTextField *tf = (NSTextField *)v;
+                NSString *text = [tf stringValue] ?: @"";
+                NSString *lower = [text lowercaseString];
+                if ([lower containsString:@"favorite"] ||
+                    [lower containsString:@"favorit"] ||  // German: Favorit
+                    [text isEqualToString:@"Default"] ||
+                    [text isEqualToString:@"Standard"]) { // German localization
+                    [tf setHidden:YES];
+                }
+            }
+
+            // Hide NSPopUpButton (favorites dropdown) — the only popup in prefs is favorites
+            if ([v isKindOfClass:[NSPopUpButton class]]) {
+                NSPopUpButton *popup = (NSPopUpButton *)v;
+                // Check if any item title matches favorites-related text
+                BOOL isFavPopup = NO;
+                for (NSMenuItem *item in [popup itemArray]) {
+                    NSString *itemTitle = [[item title] lowercaseString];
+                    if ([itemTitle containsString:@"default"] ||
+                        [itemTitle containsString:@"favorite"] ||
+                        [itemTitle containsString:@"higher rpm"]) {
+                        isFavPopup = YES;
+                        break;
+                    }
+                }
+                if (isFavPopup) {
+                    [popup setHidden:YES];
+                }
+            }
+
+            // Hide NSComboBox if used for favorites
+            if ([v isKindOfClass:[NSComboBox class]]) {
+                [v setHidden:YES];
+            }
+
+            // Hide Add (+) / Remove (-) buttons near favorites
+            if ([v isKindOfClass:[NSButton class]]) {
+                NSButton *btn = (NSButton *)v;
+                NSString *title = [[btn title] lowercaseString];
+                // Match "+", "-", "Add", "Remove", or segmented add/remove controls
+                if ([title isEqualToString:@"+"] ||
+                    [title isEqualToString:@"-"] ||
+                    [title isEqualToString:@"add"] ||
+                    [title isEqualToString:@"remove"]) {
+                    [btn setHidden:YES];
+                }
+            }
+
+            // Hide NSSegmentedControl (often used for +/- buttons in nibs)
+            if ([v isKindOfClass:[NSSegmentedControl class]]) {
+                NSSegmentedControl *seg = (NSSegmentedControl *)v;
+                if ([seg segmentCount] == 2) {
+                    NSString *s0 = [seg labelForSegment:0] ?: @"";
+                    NSString *s1 = [seg labelForSegment:1] ?: @"";
+                    if (([s0 isEqualToString:@"+"] && [s1 isEqualToString:@"-"]) ||
+                        ([s0 isEqualToString:@"-"] && [s1 isEqualToString:@"+"])) {
+                        [seg setHidden:YES];
+                    }
+                }
             }
         }
     }
@@ -295,8 +422,13 @@ NSUserDefaults *defaults;
 
 -(void)init_statusitem{
 	statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength: NSVariableStatusItemLength];
-	[statusItem setMenu: theMenu];
-    
+
+    // Build the menu entirely in code — ignore the nib menu items for the dropdown.
+    // We keep theMenu as the IBOutlet but clear it and rebuild.
+    [theMenu removeAllItems];
+    [theMenu setDelegate:self];
+    [statusItem setMenu:theMenu];
+
     if ([statusItem respondsToSelector:@selector(button)]) {
         [statusItem.button setTitle:@"smc..."];
     } else {
@@ -304,17 +436,180 @@ NSUserDefaults *defaults;
         [statusItem setHighlightMode:YES];
         [statusItem setTitle:@"smc..."];
     }
-	int i;
-	for(i=0;i<[s_menus count];i++) {
-		[theMenu insertItem:s_menus[i] atIndex:i];
-	};
-    
-    // Sign up for menuNeedsUpdate call
-    // so that the fan speeds in the menu can be updated
-    // only when needed.
-    [theMenu setDelegate:self];
+
+    // --- Fan slider items ---
+    _fanSliderViews = [[NSMutableArray alloc] init];
+    _fanSliders = [[NSMutableArray alloc] init];
+    _fanRPMLabels = [[NSMutableArray alloc] init];
+    _fanMenuItems = [[NSMutableArray alloc] init];
+
+    for (int i = 0; i < g_numFans; i++) {
+        int hwMin = [smcWrapper get_min_speed:i];
+        int hwMax = [smcWrapper get_max_speed:i];
+        if (hwMin <= 0) hwMin = 800;
+        if (hwMax <= hwMin) hwMax = hwMin + 4000;
+
+        NSString *descr = [smcWrapper get_fan_descr:i];
+
+        // Read saved value (or default to hardware minimum)
+        NSString *prefKey = [NSString stringWithFormat:@"fan_%d_min_rpm", i];
+        int savedRPM = (int)[[NSUserDefaults standardUserDefaults] integerForKey:prefKey];
+        if (savedRPM < hwMin || savedRPM > hwMax) savedRPM = hwMin;
+
+        // --- Build the custom view for this fan ---
+        CGFloat viewWidth = 260.0;
+        CGFloat viewHeight = 44.0;
+
+        NSView *rowView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, viewWidth, viewHeight)];
+
+        // Fan description label (top-left)
+        NSTextField *nameLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(14, 24, 160, 16)];
+        [nameLabel setStringValue:descr];
+        [nameLabel setBezeled:NO];
+        [nameLabel setDrawsBackground:NO];
+        [nameLabel setEditable:NO];
+        [nameLabel setSelectable:NO];
+        [nameLabel setFont:[NSFont systemFontOfSize:11 weight:NSFontWeightMedium]];
+        [nameLabel setTextColor:[NSColor secondaryLabelColor]];
+        [rowView addSubview:nameLabel];
+
+        // RPM label (top-right)
+        NSTextField *rpmLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(viewWidth - 80, 24, 66, 16)];
+        [rpmLabel setStringValue:[NSString stringWithFormat:@"%d rpm", savedRPM]];
+        [rpmLabel setBezeled:NO];
+        [rpmLabel setDrawsBackground:NO];
+        [rpmLabel setEditable:NO];
+        [rpmLabel setSelectable:NO];
+        [rpmLabel setAlignment:NSTextAlignmentRight];
+        [rpmLabel setFont:[NSFont monospacedDigitSystemFontOfSize:11 weight:NSFontWeightRegular]];
+        [rpmLabel setTextColor:[NSColor labelColor]];
+        [rowView addSubview:rpmLabel];
+
+        // Slider (bottom row)
+        NSSlider *slider = [[NSSlider alloc] initWithFrame:NSMakeRect(14, 4, viewWidth - 28, 18)];
+        [slider setMinValue:(double)hwMin];
+        [slider setMaxValue:(double)hwMax];
+        [slider setIntegerValue:savedRPM];
+        [slider setContinuous:YES];
+        [slider setTarget:self];
+        [slider setAction:@selector(fanSliderChanged:)];
+        [slider setTag:i]; // tag = fan index
+        if (@available(macOS 10.12, *)) {
+            [slider setControlSize:NSControlSizeSmall];
+        }
+        [rowView addSubview:slider];
+
+        // Create menu item with embedded view
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:@"" action:NULL keyEquivalent:@""];
+        [item setView:rowView];
+
+        [_fanSliderViews addObject:rowView];
+        [_fanSliders addObject:slider];
+        [_fanRPMLabels addObject:rpmLabel];
+        [_fanMenuItems addObject:item];
+
+        [theMenu addItem:item];
+    }
+
+    // --- Separator ---
+    [theMenu addItem:[NSMenuItem separatorItem]];
+
+    // --- Sleep/Wake Fix... ---
+    NSMenuItem *sleepWakeItem = [[NSMenuItem alloc]
+        initWithTitle:@"Sleep/Wake Fix..."
+               action:@selector(showFixWindowFromMenu:)
+        keyEquivalent:@""];
+    [sleepWakeItem setTarget:[SleepWakeFix class]];
+    [theMenu addItem:sleepWakeItem];
+
+    // --- Preferences... ---
+    NSMenuItem *prefsItem = [[NSMenuItem alloc]
+        initWithTitle:@"Preferences..."
+               action:@selector(openPreferences:)
+        keyEquivalent:@""];
+    [prefsItem setTarget:self];
+    [theMenu addItem:prefsItem];
+
+    // --- Separator ---
+    [theMenu addItem:[NSMenuItem separatorItem]];
+
+    // --- Quit ---
+    NSMenuItem *quitItem = [[NSMenuItem alloc]
+        initWithTitle:@"Quit smcFanControl CE"
+               action:@selector(terminate:)
+        keyEquivalent:@""];
+    [quitItem setTarget:self];
+    [theMenu addItem:quitItem];
 }
 
+#pragma mark **Slider Menu Actions**
+
+/// Called when user drags a fan slider in the menu.
+-(void)fanSliderChanged:(id)sender {
+    NSSlider *slider = (NSSlider *)sender;
+    int fanIndex = (int)[slider tag];
+    int newRPM = (int)[slider integerValue];
+
+    // Update the RPM label next to the slider
+    if (fanIndex < (int)[_fanRPMLabels count]) {
+        NSTextField *label = _fanRPMLabels[fanIndex];
+        [label setStringValue:[NSString stringWithFormat:@"%d rpm", newRPM]];
+    }
+
+    // Write the new minimum to SMC
+    [FanControl setRights];
+    [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dMn", fanIndex]
+                          value:[@(newRPM) tohex]];
+
+    // Persist to NSUserDefaults
+    NSString *prefKey = [NSString stringWithFormat:@"fan_%d_min_rpm", fanIndex];
+    [[NSUserDefaults standardUserDefaults] setInteger:newRPM forKey:prefKey];
+}
+
+/// Apply saved per-fan minimum RPM values to SMC (used on launch and wake).
+-(void)applyPerFanSettings {
+    [FanControl setRights];
+    for (int i = 0; i < g_numFans; i++) {
+        int hwMin = [smcWrapper get_min_speed:i];
+        int hwMax = [smcWrapper get_max_speed:i];
+        if (hwMin <= 0) hwMin = 800;
+        if (hwMax <= hwMin) hwMax = hwMin + 4000;
+
+        NSString *prefKey = [NSString stringWithFormat:@"fan_%d_min_rpm", i];
+        int savedRPM = (int)[[NSUserDefaults standardUserDefaults] integerForKey:prefKey];
+        if (savedRPM < hwMin || savedRPM > hwMax) savedRPM = hwMin;
+
+        [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dMn", i]
+                              value:[@(savedRPM) tohex]];
+
+        // Also update slider position if sliders exist
+        if (i < (int)[_fanSliders count]) {
+            [(NSSlider *)_fanSliders[i] setIntegerValue:savedRPM];
+        }
+        if (i < (int)[_fanRPMLabels count]) {
+            [(NSTextField *)_fanRPMLabels[i] setStringValue:
+                [NSString stringWithFormat:@"%d rpm", savedRPM]];
+        }
+    }
+}
+
+/// Update slider RPM labels with actual current fan speeds from SMC.
+-(void)updateSliderRPMLabels {
+    for (int i = 0; i < g_numFans && i < (int)[_fanRPMLabels count]; i++) {
+        int actualRPM = [smcWrapper get_fan_rpm:i];
+        NSTextField *label = _fanRPMLabels[i];
+        [label setStringValue:[NSString stringWithFormat:@"%d rpm", actualRPM]];
+    }
+}
+
+
+/// Open preferences window and force it to front.  LSUIElement apps need
+/// explicit activation since they have no Dock icon to click.
+- (void)openPreferences:(id)sender {
+    [NSApp activateIgnoringOtherApps:YES];
+    [(NSWindow *)mainwindow makeKeyAndOrderFront:nil];
+    [NSApp activateIgnoringOtherApps:YES];
+}
 
 #pragma mark **Action-Methods**
 - (IBAction)loginItem:(id)sender{
@@ -428,14 +723,9 @@ NSUserDefaults *defaults;
     int selectedRpm = 0;
     
     if (bNeedRpm == true) {
-        // Read the current fan speed for the desired fan and format text for display in the menubar.
-        NSArray *fans = [FavoritesController arrangedObjects][[FavoritesController selectionIndex]][PREF_FAN_ARRAY];
-        for (i=0; i<g_numFans && i<[fans count]; i++)
-        {
-            if ([fans[i][PREF_FAN_SHOWMENU] boolValue]==YES) {
-                selectedRpm = [smcWrapper get_fan_rpm:i];
-                break;
-            }
+        // Read the current fan speed for fan 0 (primary) for display in the menubar.
+        if (g_numFans > 0) {
+            selectedRpm = [smcWrapper get_fan_rpm:0];
         }
         
         NSNumberFormatter *nc=[[NSNumberFormatter alloc] init];
@@ -449,7 +739,17 @@ NSUserDefaults *defaults;
         // Read current temperature and format text for the menubar.
         c_temp = [smcWrapper get_maintemp];
         
-        if ([[defaults objectForKey:PREF_TEMP_UNIT] intValue]==0) {
+        // Detect temperature unit from system locale (no user preference).
+        BOOL useFahrenheit;
+        {
+            NSString *tempUnit = [[NSLocale currentLocale] objectForKey:@"kCFLocaleTemperatureUnitKey"];
+            if (tempUnit) {
+                useFahrenheit = [tempUnit isEqualToString:@"Fahrenheit"];
+            } else {
+                useFahrenheit = ![[[NSLocale currentLocale] objectForKey:NSLocaleUsesMetricSystem] boolValue];
+            }
+        }
+        if (!useFahrenheit) {
             temp = [NSString stringWithFormat:@"%@%CC",@(c_temp),(unsigned short)0xb0];
         } else {
             NSNumberFormatter *ncf=[[NSNumberFormatter alloc] init];
@@ -590,10 +890,9 @@ NSUserDefaults *defaults;
 
 - (IBAction)savePreferences:(id)sender{
 	[(NSUserDefaultsController *)DefaultsController save:sender];
-	[defaults setValue:[FavoritesController content] forKey:PREF_FAVORITES_ARRAY];
 	[defaults synchronize];
 	[mainwindow close];
-	[self apply_settings:sender controllerindex:[FavoritesController selectionIndex]];
+	[self applyPerFanSettings];
 	undo_dic=[NSDictionary dictionaryWithDictionary:[defaults dictionaryRepresentation]];
 }
 
@@ -722,21 +1021,12 @@ NSUserDefaults *defaults;
 	}
 }
 
-// Called when user clicks on smcFanControl status bar item
-// in the status area of the menubar. The fan speed
-// menu items are now only updated here in order to
-// reduce the energy impact of -readFanData.
+// Called when user clicks on smcFanControl status bar item.
+// Update the RPM labels in the slider views with actual fan speeds.
 - (void)menuNeedsUpdate:(NSMenu*)menu {
     dispatch_async(dispatch_get_main_queue(), ^{
         if (theMenu == menu) {
-            if (_machineDefaultsDict == nil)
-                return;
-            
-            int i;
-            for(i=0; i<g_numFans; ++i){
-                NSString *fandesc=_machineDefaultsDict[@"Fans"][i][@"Description"];
-                [[theMenu itemWithTag:(i+1)*10] setTitle:[NSString stringWithFormat:@"%@: %@ rpm",fandesc,[@([smcWrapper get_fan_rpm:i]) stringValue]]];
-            }
+            [self updateSliderRPMLabels];
         }
     });
 }
@@ -775,7 +1065,7 @@ NSUserDefaults *defaults;
     }
     error = nil;
     if ([[MachineDefaults computerModel] rangeOfString:@"MacBookPro15"].location != NSNotFound) {
-        for (int i=0;i<[[FavoritesController arrangedObjects][0][PREF_FAN_ARRAY] count];i++) {
+        for (int i=0; i<g_numFans; i++) {
             [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dMd",i] value:@"00"];
         }
     }
@@ -828,29 +1118,21 @@ NSUserDefaults *defaults;
 }
 
 - (void)systemDidWakeFromSleep:(id)sender{
-	[self apply_settings:nil controllerindex:[[defaults objectForKey:PREF_SELECTION_DEFAULT] intValue]];
+	[self applyPerFanSettings];
 }
 
 
 - (void)powerChangeToBattery:(id)sender{
-
-	if ([[defaults objectForKey:@"AutomaticChange"] boolValue]==YES) {
-		[self apply_settings:nil controllerindex:[[defaults objectForKey:PREF_BATTERY_SELECTION] intValue]];
-	}
+	// With simplified slider UI, just re-apply the saved per-fan settings.
+	[self applyPerFanSettings];
 }
 
 - (void)powerChangeToAC:(id)sender{
-	if ([[defaults objectForKey:@"AutomaticChange"] boolValue]==YES) {
-		[self apply_settings:nil controllerindex:[[defaults objectForKey:PREF_AC_SELECTION] intValue]];
-
-	}
+	[self applyPerFanSettings];
 }
 
 - (void)powerChangeToACLoading:(id)sender{
-	if ([[defaults objectForKey:@"AutomaticChange"] boolValue]==YES) {
-		[self apply_settings:nil controllerindex:[[defaults objectForKey:PREF_CHARGING_SELECTION] intValue]];
-
-	}	
+	[self applyPerFanSettings];
 }
 
 
@@ -1038,6 +1320,7 @@ NSUserDefaults *defaults;
 
 -(void)dealloc
 {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     [[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
 }
 

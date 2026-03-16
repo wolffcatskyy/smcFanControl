@@ -105,6 +105,12 @@
 	 
 	NSImage *menu_image;
 	NSImage *menu_image_alt;
+
+	// Slider menu items — one per fan
+	NSMutableArray *_fanSliderViews;   // array of NSView (custom slider rows)
+	NSMutableArray *_fanSliders;       // array of NSSlider
+	NSMutableArray *_fanRPMLabels;     // array of NSTextField (RPM readout)
+	NSMutableArray *_fanMenuItems;     // array of NSMenuItem (with embedded view)
 }
 
 @property (nonatomic, strong ) 	NSMutableDictionary *machineDefaultsDict;
@@ -135,6 +141,10 @@
 - (IBAction)menuSelect:(id)sender;
 - (void)menuNeedsUpdate:(NSMenu*)menu;
 - (void)updateTimerForDisplayMode:(int)mode;
+- (void)fanSliderChanged:(id)sender;
+- (void)applyPerFanSettings;
+- (void)updateSliderRPMLabels;
+- (void)openPreferences:(id)sender;
 @end
 
 
