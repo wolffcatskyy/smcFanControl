@@ -34,6 +34,7 @@
 + (void)terminateIfNoFans;
 @property (NS_NONATOMIC_IOSONLY, getter=isInAutoStart, readonly) BOOL inAutoStart;
 - (void)setStartAtLogin:(BOOL)enabled;
++ (BOOL)smcBinaryHasCorrectPermissions;
 + (void)checkRightStatus:(OSStatus)status;
 @end
 
@@ -839,12 +840,38 @@ NSUserDefaults *defaults;
 }
 
 
+/// Check if the smc binary already has correct owner (root), group (admin), and
+/// setuid/setgid permissions (octal 6555 = decimal 3437).
++(BOOL)smcBinaryHasCorrectPermissions {
+	NSString *smcpath = [[NSBundle mainBundle] pathForResource:@"smc" ofType:@""];
+	if (!smcpath) return NO;
+
+	NSFileManager *fmanage = [NSFileManager defaultManager];
+	NSDictionary *fdic = [fmanage attributesOfItemAtPath:smcpath error:nil];
+	if (!fdic) return NO;
+
+	BOOL ownerIsRoot = [[fdic valueForKey:@"NSFileOwnerAccountName"] isEqualToString:@"root"];
+	BOOL groupIsAdmin = [[fdic valueForKey:@"NSFileGroupOwnerAccountName"] isEqualToString:@"admin"];
+	BOOL permsCorrect = ([[fdic valueForKey:@"NSFilePosixPermissions"] intValue] == 3437);
+
+	return (ownerIsRoot && groupIsAdmin && permsCorrect);
+}
+
 +(void) checkRightStatus:(OSStatus) status
 {
     if (status != errAuthorizationSuccess) {
+        // If authorization failed but the binary already has correct permissions
+        // (e.g. pre-set during build/install), skip the fatal error.
+        // AuthorizationExecuteWithPrivileges is deprecated and fails with
+        // errAuthorizationDenied (-60007) on modern macOS even with lowered SIP.
+        if ([self smcBinaryHasCorrectPermissions]) {
+            NSLog(@"smcFanControl: Authorization returned %d but smc binary already has correct permissions — continuing.", (int)status);
+            return;
+        }
+
         NSAlert *alert = [[NSAlert alloc] init];
         [alert setMessageText:@"Authorization failed"];
-        [alert setInformativeText:[NSString stringWithFormat:@"Authorization failed with code %d",status]];
+        [alert setInformativeText:[NSString stringWithFormat:@"Authorization failed with code %d. The smc binary needs to be owned by root:admin with setuid permissions (6555). You can fix this manually:\n\nsudo chown root:admin <path-to-smc>\nsudo chmod 6555 <path-to-smc>",status]];
         [alert addButtonWithTitle:@"Quit"];
         [alert setAlertStyle:NSAlertStyleCritical];
         NSInteger result = [alert runModal];
@@ -856,48 +883,55 @@ NSUserDefaults *defaults;
 }
 
 #pragma mark **SMC-Binary Owner/Right Check**
-//TODO: It looks like this function is called inefficiently.
 //call smc binary with sudo rights and apply
 +(void)setRights{
-	NSString *smcpath = [[NSBundle mainBundle]   pathForResource:@"smc" ofType:@""];
-	NSFileManager *fmanage=[NSFileManager defaultManager];
-    NSDictionary *fdic = [fmanage attributesOfItemAtPath:smcpath error:nil];
-	if ([[fdic valueForKey:@"NSFileOwnerAccountName"] isEqualToString:@"root"] && [[fdic valueForKey:@"NSFileGroupOwnerAccountName"] isEqualToString:@"admin"] && ([[fdic valueForKey:@"NSFilePosixPermissions"] intValue]==3437)) {
-		// If the SMC binary has already been modified to run as root, then do nothing.
-        return;
-	 }
-    //TODO: Is the usage of commPipe safe?
+	// First check: if the binary already has correct permissions, skip authorization entirely.
+	// This avoids calling the deprecated AuthorizationExecuteWithPrivileges, which fails
+	// with errAuthorizationDenied (-60007) on modern macOS.
+	if ([self smcBinaryHasCorrectPermissions]) {
+		return;
+	}
+
+	NSString *smcpath = [[NSBundle mainBundle] pathForResource:@"smc" ofType:@""];
+	if (!smcpath) {
+		NSLog(@"smcFanControl: Could not find smc binary in bundle Resources.");
+		return;
+	}
+
+	NSLog(@"smcFanControl: smc binary does not have correct permissions, attempting to fix...");
+
+	// Try AuthorizationExecuteWithPrivileges (deprecated but may work on older macOS / lowered SIP).
 	FILE *commPipe;
 	AuthorizationRef authorizationRef;
 	AuthorizationItem gencitem = { "system.privilege.admin", 0, NULL, 0 };
 	AuthorizationRights gencright = { 1, &gencitem };
 	int flags = kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed;
-	OSStatus status = AuthorizationCreate(&gencright,  kAuthorizationEmptyEnvironment, flags, &authorizationRef);
-    
-    [self checkRightStatus:status];
-    
-    NSString *tool=@"/usr/sbin/chown";
-    NSArray *argsArray = @[@"root:admin",smcpath];
+	OSStatus status = AuthorizationCreate(&gencright, kAuthorizationEmptyEnvironment, flags, &authorizationRef);
+
+	[self checkRightStatus:status];
+
+	NSString *tool = @"/usr/sbin/chown";
+	NSArray *argsArray = @[@"root:admin", smcpath];
 	int i;
 	char *args[255];
-	for(i = 0;i < [argsArray count];i++){
+	for(i = 0; i < [argsArray count]; i++){
 		args[i] = (char *)[argsArray[i] UTF8String];
 	}
 	args[i] = NULL;
-	status=AuthorizationExecuteWithPrivileges(authorizationRef,[tool UTF8String],0,args,&commPipe);
-    
-    [self checkRightStatus:status];
-    
-    	//second call for suid-bit
-	tool=@"/bin/chmod";
-	argsArray = @[@"6555",smcpath];
-	for(i = 0;i < [argsArray count];i++){
-		args[i] = (char *)[argsArray[i] UTF8String];
-	}
-	args[i] = NULL;
-	status=AuthorizationExecuteWithPrivileges(authorizationRef,[tool UTF8String],0,args,&commPipe);
+	status = AuthorizationExecuteWithPrivileges(authorizationRef, [tool UTF8String], 0, args, &commPipe);
 
-    [self checkRightStatus:status];
+	[self checkRightStatus:status];
+
+	// Second call for suid-bit
+	tool = @"/bin/chmod";
+	argsArray = @[@"6555", smcpath];
+	for(i = 0; i < [argsArray count]; i++){
+		args[i] = (char *)[argsArray[i] UTF8String];
+	}
+	args[i] = NULL;
+	status = AuthorizationExecuteWithPrivileges(authorizationRef, [tool UTF8String], 0, args, &commPipe);
+
+	[self checkRightStatus:status];
 }
 
 
