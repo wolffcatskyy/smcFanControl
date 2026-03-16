@@ -1,5 +1,7 @@
 # smcFanControl
 
+> **Note:** This repository is no longer actively maintained. A community-maintained fork is available at [smcFanControl Community Edition](https://github.com/wolffcatskyy/smcFanControl) with fixes for deprecated macOS APIs and merged community PRs.
+
 smcFanControl lets the user set a minimum speed for built-in fans. It allows you to increase your minimum fan speed to make your Intel Mac run cooler. In order to not damage your machine, smcFanControl does not let you set a minimum speed to a value below Apple's defaults.
 
 ![My image](https://www.eidac.de/smc_screenshot.png)
