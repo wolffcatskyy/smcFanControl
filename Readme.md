@@ -62,6 +62,7 @@ This fork fixes the clamping behavior so fan speeds are applied reliably regardl
 - **Boot-time fan daemon** — Optional LaunchDaemon applies fan settings before login, before you even log in
 - **Icon-only menu bar** — Minimal CPU usage; no temperature/RPM clutter unless you want it
 - **Auto-detect temperature unit** — Celsius or Fahrenheit from system locale, no manual setting
+- **OCLP Update Guardian** — Blocks incompatible macOS updates on OCLP-patched Macs
 - **Lightweight** — ~94% smaller than original (Sparkle framework removed)
 
 ## OCLP Boot Fan Control
@@ -93,6 +94,26 @@ sudo make uninstall
 
 See [`FanControlHelper/INTEGRATION.md`](FanControlHelper/INTEGRATION.md) for full technical details.
 
+## OCLP Update Guardian
+
+Automatically blocks macOS updates that aren't yet supported by OpenCore Legacy Patcher.
+
+When enabled, the guardian checks OCLP's latest release to see which macOS versions are supported. If Apple offers an update that OCLP hasn't confirmed compatible, notifications are suppressed and automatic downloads are blocked. When OCLP releases support for that version, updates flow through normally.
+
+A daily LaunchDaemon re-checks automatically, since macOS tends to reset update preferences and OCLP releases new versions.
+
+**Emergency abort:** If an update accidentally starts downloading, use `--abort` to kill the download and purge staged files.
+
+```bash
+sudo updateguardian --enable     # Turn on
+sudo updateguardian --disable    # Turn off
+sudo updateguardian --status     # Show current state
+sudo updateguardian --check      # Check OCLP compatibility now
+sudo updateguardian --abort      # Kill staged download (emergency)
+```
+
+See [`UpdateGuardian/`](UpdateGuardian/) for implementation details.
+
 ## smc CLI
 
 A standalone `smc` binary for reading SMC sensors and fan speeds from the terminal is included in releases. When installing via Homebrew, it is included automatically.
@@ -112,6 +133,7 @@ A standalone `smc` binary for reading SMC sensors and fan speeds from the termin
 - **Modern UI** — SF Symbol fan icon, system fonts, dark mode support
 - **Icon-only menu bar** — Minimal CPU usage, optional temperature/RPM display
 - **Fixed auth error** — Works on modern macOS without deprecated APIs
+- **OCLP Update Guardian** — Simple on/off toggle blocks incompatible updates automatically
 - **Ko-fi donation link** — Support the maintainer
 
 ## License
