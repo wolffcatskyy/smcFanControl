@@ -1,0 +1,50 @@
+﻿/* Traditional Chinese translation - strings need translating from English */
+
+"Yes" = "好";
+
+"No" = "不要";
+
+"MainFan" = "主風扇";
+
+"Left Fan" = "左側風扇";
+
+"Right Fan" = "右側風扇";
+
+"smcFanControl has not been tested on this machine yet, but it should run if you follow the instructions. \n\nIf you choose to continue, please make sure you have no other FanControl-software running. Otherwise please quit, deinstall the other software, restart your machine and rerun smcFanControl!" = "smcFanControl目前尚未在此裝置上進行測試，若按照說明操作，或許尚可以運作。\n\n若選擇繼續，請確認你沒有其他正在執行的風扇控制軟體。否則請先結束smcFanControl，並解除安裝其他同類型軟體，接著將你的Mac重新開機後再重新執行smcFanControl！";
+
+"Continue" = "繼續";
+
+"Quit" = "結束";
+
+"Alert!" = "警告！";
+
+"Do you want to reset smcFanControl to default settings? Fans will return to default speed." = "你想要將smcFanControl重置為預設設定嗎？\n風扇將會回復為預設轉速。";
+
+"Please shutdown your computer now to return to default fan settings." = "請立即關閉你的電腦來回復為預設風扇設定。";
+
+"Reset Settings" = "重置設定";
+
+"Shutdown required" = "需要重新開機";
+
+/* Sleep/Wake Fix */
+"Sleep/Wake Fix..." = "修復睡眠/喚醒...";
+
+"Sleep/Wake Fix for Intel Macs" = "修復搭載Intel晶片Mac的睡眠/喚醒";
+
+"Older Intel Macs can crash when waking from sleep due to macOS hibernation features designed for newer hardware. This fix disables hibernation and related features so your Mac sleeps and wakes reliably." = "搭載Intel晶片的舊機型Mac當從睡眠中唤醒時，可能會因為專為新硬體設計的macOS休眠功能而當機。此修復會停用休眠及相關功能，來確保你的Mac能夠穩定地睡眠和唤醒。";
+
+"No reboot required. Changes take effect immediately." = "不需重新開機，更改將立即生效。";
+
+"Fix Applied" = "已套用修復";
+
+"Needs Fix" = "需要修復";
+
+"Apply Fix" = "套用修復";
+
+"Restore Defaults" = "還原為預設值";
+
+/* Menu items */
+"Quit smcFanControl CE" = "結束smcFanControl CE";
+
+/* Support */
+"Support on Ko-fi" = "支援Ko-fi";
