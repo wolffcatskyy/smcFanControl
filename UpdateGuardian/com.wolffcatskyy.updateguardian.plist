@@ -6,12 +6,12 @@
     <string>com.wolffcatskyy.updateguardian</string>
 
     <key>Comment</key>
-    <string>OCLP Update Guardian - Re-applies update blocking preferences daily and checks OCLP compatibility for pending macOS updates. Part of smcFanControl Community Edition.</string>
+    <string>OCLP Update Guardian - Checks OCLP compatibility daily and enforces update blocking. Part of smcFanControl Community Edition.</string>
 
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/bin/updateguardian</string>
-        <string>--reapply</string>
+        <string>--check</string>
     </array>
 
     <!-- Run daily at 10:00 AM -->
@@ -23,20 +23,9 @@
         <integer>0</integer>
     </dict>
 
-    <!-- Also run at load (boot) -->
+    <!-- Also run at boot -->
     <key>RunAtLoad</key>
     <true/>
-
-    <!-- Run when network becomes available (for OCLP compatibility check) -->
-    <key>KeepAlive</key>
-    <dict>
-        <key>NetworkState</key>
-        <true/>
-    </dict>
-
-    <!-- Don't keep running - just execute and exit -->
-    <key>LaunchOnlyOnce</key>
-    <false/>
 
     <!-- Logging -->
     <key>StandardOutPath</key>
@@ -56,6 +45,6 @@
     <key>Nice</key>
     <integer>10</integer>
     <key>TimeOut</key>
-    <integer>120</integer>
+    <integer>60</integer>
 </dict>
 </plist>
