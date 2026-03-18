@@ -62,6 +62,7 @@ This fork fixes the clamping behavior so fan speeds are applied reliably regardl
 - **Boot-time fan daemon** — Optional LaunchDaemon applies fan settings before login, before you even log in
 - **Icon-only menu bar** — Minimal CPU usage; no temperature/RPM clutter unless you want it
 - **Auto-detect temperature unit** — Celsius or Fahrenheit from system locale, no manual setting
+- **OCLP Update Guardian** — Blocks incompatible macOS updates on OCLP-patched Macs with smart compatibility checking
 - **Lightweight** — ~94% smaller than original (Sparkle framework removed)
 
 ## OCLP Boot Fan Control
@@ -93,6 +94,42 @@ sudo make uninstall
 
 See [`FanControlHelper/INTEGRATION.md`](FanControlHelper/INTEGRATION.md) for full technical details.
 
+## OCLP Update Guardian
+
+Protects your OCLP-patched Mac from accidentally installing incompatible macOS updates.
+
+**Three protection levels:**
+- **Block All Updates** — No updates until you're ready. Best for cautious users.
+- **Block Major Upgrades** — Allows security patches (15.3→15.4) but blocks version jumps (Sequoia→Tahoe)
+- **Allow All** — Standard macOS update behavior
+
+**Smart OCLP compatibility checking:**
+The guardian automatically checks OCLP's releases to see if a pending macOS update has been tested. When OCLP confirms compatibility, you'll be notified it's safe to update.
+
+**Auto-persistence:**
+macOS (especially 15.4+) aggressively re-enables automatic updates. The guardian runs a daily check to ensure your preferences stay set.
+
+**How it works:**
+- Manages Software Update preferences (`com.apple.SoftwareUpdate`)
+- Writes managed configuration profiles to restrict major version upgrades
+- Optionally blocks Apple update servers via `/etc/hosts` (Block All mode)
+- Dismisses staged update downloads and notification badges
+- Checks OCLP GitHub releases for compatibility confirmation
+
+**CLI usage:**
+```bash
+sudo updateguardian --status            # Show current status
+sudo updateguardian --mode block-all    # Block ALL updates
+sudo updateguardian --mode block-major  # Block major upgrades only
+sudo updateguardian --mode allow        # Allow all updates
+sudo updateguardian --check-oclp        # Check OCLP compatibility
+```
+
+**LaunchDaemon:**
+A daily LaunchDaemon (`com.wolffcatskyy.updateguardian`) re-applies your preferences automatically, since macOS tends to reset them — particularly after Sequoia 15.4.
+
+See [`UpdateGuardian/`](UpdateGuardian/) for implementation details.
+
 ## smc CLI
 
 A standalone `smc` binary for reading SMC sensors and fan speeds from the terminal is included in releases. When installing via Homebrew, it is included automatically.
@@ -112,6 +149,7 @@ A standalone `smc` binary for reading SMC sensors and fan speeds from the termin
 - **Modern UI** — SF Symbol fan icon, system fonts, dark mode support
 - **Icon-only menu bar** — Minimal CPU usage, optional temperature/RPM display
 - **Fixed auth error** — Works on modern macOS without deprecated APIs
+- **OCLP Update Guardian** — Blocks incompatible updates with three modes, auto-persistence, and OCLP compatibility checking
 - **Ko-fi donation link** — Support the maintainer
 
 ## License

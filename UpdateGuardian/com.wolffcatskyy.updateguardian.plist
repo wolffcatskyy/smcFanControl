@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.wolffcatskyy.updateguardian</string>
+
+    <key>Comment</key>
+    <string>OCLP Update Guardian - Re-applies update blocking preferences daily and checks OCLP compatibility for pending macOS updates. Part of smcFanControl Community Edition.</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/updateguardian</string>
+        <string>--reapply</string>
+    </array>
+
+    <!-- Run daily at 10:00 AM -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>10</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Also run at load (boot) -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Run when network becomes available (for OCLP compatibility check) -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>NetworkState</key>
+        <true/>
+    </dict>
+
+    <!-- Don't keep running - just execute and exit -->
+    <key>LaunchOnlyOnce</key>
+    <false/>
+
+    <!-- Logging -->
+    <key>StandardOutPath</key>
+    <string>/var/log/oclp-update-guardian.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/oclp-update-guardian.log</string>
+
+    <!-- Run as root for full enforcement -->
+    <key>UserName</key>
+    <string>root</string>
+    <key>GroupName</key>
+    <string>wheel</string>
+
+    <!-- Resource limits -->
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>Nice</key>
+    <integer>10</integer>
+    <key>TimeOut</key>
+    <integer>120</integer>
+</dict>
+</plist>
