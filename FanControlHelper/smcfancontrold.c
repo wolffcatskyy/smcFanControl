@@ -388,6 +388,10 @@ int main(int argc, char *argv[])
     static const char fannum[] = "0123456789ABCDEFGHIJ";
     int errors = 0;
 
+    /* Read the hardware minimum speeds first, to know which fans need forced mode.
+     * Build a bitmask for the FS!  key (forced fans). */
+    UInt16 force_bitmask = 0;
+
     for (CFIndex i = 0; i < fan_count; i++) {
         CFDictionaryRef fan = CFArrayGetValueAtIndex(fans, i);
         if (!fan || CFGetTypeID(fan) != CFDictionaryGetTypeID()) {
@@ -415,33 +419,68 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        /* Build the F{n}Mn key (fan minimum speed) */
-        char key[5];
-        snprintf(key, sizeof(key), "F%cMn", fannum[fan_id]);
-
-        /* Read current minimum for logging */
+        /* Read hardware minimum to determine if forced mode is needed */
+        char mn_key[5];
+        snprintf(mn_key, sizeof(mn_key), "F%cMn", fannum[fan_id]);
         SMCVal_t cur_val;
-        kr = smc_read(conn, key, &cur_val);
+        kr = smc_read(conn, mn_key, &cur_val);
         if (kr != kIOReturnSuccess) {
-            log_msg("error: cannot read %s (0x%08x)", key, kr);
+            log_msg("error: cannot read %s (0x%08x)", mn_key, kr);
             errors++;
             continue;
         }
+        float hw_min = decode_fpe2(cur_val.bytes);
 
-        float current_min = decode_fpe2(cur_val.bytes);
-
-        /* Write new minimum */
+        /* Write the minimum speed floor */
         unsigned char fpe2_bytes[2];
         encode_fpe2(min_rpm, fpe2_bytes);
 
-        kr = smc_write(conn, key, fpe2_bytes, 2);
+        kr = smc_write(conn, mn_key, fpe2_bytes, 2);
         if (kr != kIOReturnSuccess) {
-            log_msg("error: cannot write %s (0x%08x)", key, kr);
+            log_msg("error: cannot write %s (0x%08x)", mn_key, kr);
             errors++;
             continue;
         }
 
-        log_msg("fan %d (%s): min RPM %.0f -> %d", fan_id, key, current_min, min_rpm);
+        log_msg("fan %d (%s): min RPM %.0f -> %d", fan_id, mn_key, hw_min, min_rpm);
+
+        /* If the requested speed is above hardware minimum, also set forced mode + target */
+        if (min_rpm > (int)hw_min) {
+            force_bitmask |= (1 << fan_id);
+
+            /* Try per-fan mode key first (older Macs: F{n}Md) */
+            char md_key[5];
+            snprintf(md_key, sizeof(md_key), "F%dMd", fan_id);
+            SMCVal_t md_val;
+            kern_return_t md_kr = smc_read(conn, md_key, &md_val);
+            if (md_kr == kIOReturnSuccess) {
+                unsigned char md_byte = 0x01;  /* forced mode */
+                smc_write(conn, md_key, &md_byte, 1);
+            }
+
+            /* Set target speed */
+            char tg_key[5];
+            snprintf(tg_key, sizeof(tg_key), "F%cTg", fannum[fan_id]);
+            kr = smc_write(conn, tg_key, fpe2_bytes, 2);
+            if (kr == kIOReturnSuccess) {
+                log_msg("fan %d (%s): target RPM set to %d (forced)", fan_id, tg_key, min_rpm);
+            } else {
+                log_msg("warning: cannot write %s (0x%08x)", tg_key, kr);
+            }
+        }
+    }
+
+    /* Write the global force bitmask (FS! ) if any fan is forced */
+    if (force_bitmask != 0) {
+        unsigned char fs_bytes[2];
+        fs_bytes[0] = (force_bitmask >> 8) & 0xFF;
+        fs_bytes[1] = force_bitmask & 0xFF;
+        kr = smc_write(conn, "FS! ", fs_bytes, 2);
+        if (kr == kIOReturnSuccess) {
+            log_msg("FS!  bitmask set to 0x%04x", force_bitmask);
+        } else {
+            log_msg("warning: cannot write FS!  (0x%08x) — per-fan Md keys used as fallback", kr);
+        }
     }
 
     /* Cleanup */

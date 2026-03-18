@@ -420,6 +420,82 @@ NSUserDefaults *defaults;
         }
     }
 
+    // Hide advanced preferences that aren't needed in the simplified UI.
+    // Keep: Start at login checkbox, menu bar display mode, OCLP toggle.
+    // Hide: auto-change power settings, color selector, fan table, sync checkbox.
+    if (mainwindow) {
+        // Hide the auto-change checkbox and its associated power-source popups
+        if (autochange) [(NSView *)autochange setHidden:YES];
+        if (colorSelector) [(NSView *)colorSelector setHidden:YES];
+        if (syncslider) [(NSView *)syncslider setHidden:YES];
+
+        // Hide the fan table (old per-fan settings table from nib) — replaced by menu sliders
+        NSView *prefContent2 = [(NSWindow *)mainwindow contentView];
+        NSMutableArray *stack2 = [NSMutableArray arrayWithObject:prefContent2];
+        while (stack2.count > 0) {
+            NSView *v = stack2.lastObject;
+            [stack2 removeLastObject];
+            [stack2 addObjectsFromArray:v.subviews];
+
+            // Hide the fan table scroll view
+            if ([v isKindOfClass:[NSScrollView class]]) {
+                NSScrollView *sv = (NSScrollView *)v;
+                // Check if this scroll view contains a table (the fan table)
+                if ([sv.documentView isKindOfClass:[NSTableView class]]) {
+                    [sv setHidden:YES];
+                }
+            }
+
+            // Hide labels related to auto-change power settings
+            if ([v isKindOfClass:[NSTextField class]]) {
+                NSTextField *tf = (NSTextField *)v;
+                NSString *text = [tf stringValue] ?: @"";
+                NSString *lower = [text lowercaseString];
+                if ([lower containsString:@"battery"] ||
+                    [lower containsString:@"batterie"] ||  // German
+                    [lower containsString:@"power source"] ||
+                    [lower containsString:@"charging"] ||
+                    [lower containsString:@"laden"] ||     // German: charging
+                    [lower containsString:@"stromquelle"] || // German: power source
+                    [lower containsString:@"color"] ||
+                    [lower containsString:@"farbe"] ||     // German: color
+                    [lower containsString:@"couleur"]) {   // French: color
+                    [tf setHidden:YES];
+                }
+            }
+
+            // Hide power-source popup buttons (Battery/AC/Charging favorites selectors)
+            if ([v isKindOfClass:[NSPopUpButton class]] && ![v isHidden]) {
+                NSPopUpButton *popup = (NSPopUpButton *)v;
+                // These popups are bound to battery/AC/charging selection prefs
+                for (NSDictionary *binding in @[@{@"key": @"selectedIndex"}]) {
+                    NSDictionary *info = [popup infoForBinding:@"selectedIndex"];
+                    if (info) {
+                        NSString *keyPath = info[NSObservedKeyPathKey] ?: @"";
+                        if ([keyPath containsString:@"selbatt"] ||
+                            [keyPath containsString:@"selac"] ||
+                            [keyPath containsString:@"selload"]) {
+                            [popup setHidden:YES];
+                        }
+                    }
+                }
+            }
+
+            // Hide the "Autoapply favorite when powersource changes" checkbox
+            if ([v isKindOfClass:[NSButton class]]) {
+                NSButton *btn = (NSButton *)v;
+                NSString *title = [[btn title] lowercaseString];
+                if ([title containsString:@"autoapply"] ||
+                    [title containsString:@"powersource"] ||
+                    [title containsString:@"power source"] ||
+                    [title containsString:@"automatisch"] ||  // German
+                    [title containsString:@"stromquelle"]) {  // German
+                    [btn setHidden:YES];
+                }
+            }
+        }
+    }
+
 }
 
 
@@ -517,6 +593,23 @@ NSUserDefaults *defaults;
     // --- Separator ---
     [theMenu addItem:[NSMenuItem separatorItem]];
 
+    // --- OCLP Boot Fan Control toggle (only shown on OCLP Macs) ---
+    if ([OCLPHelper isOCLPMac]) {
+        NSString *oclpTitle = [OCLPHelper isDaemonInstalled]
+            ? @"Boot Fan Control: On"
+            : @"Boot Fan Control: Off";
+        NSMenuItem *oclpItem = [[NSMenuItem alloc]
+            initWithTitle:oclpTitle
+                   action:@selector(toggleOCLPDaemon:)
+            keyEquivalent:@""];
+        [oclpItem setTarget:self];
+        [oclpItem setTag:9999]; // unique tag to find it later
+        if ([OCLPHelper isDaemonInstalled]) {
+            [oclpItem setState:NSOnState];
+        }
+        [theMenu addItem:oclpItem];
+    }
+
     // --- Sleep/Wake Fix... ---
     NSMenuItem *sleepWakeItem = [[NSMenuItem alloc]
         initWithTitle:@"Sleep/Wake Fix..."
@@ -545,6 +638,34 @@ NSUserDefaults *defaults;
     [theMenu addItem:quitItem];
 }
 
+#pragma mark **OCLP Toggle**
+
+/// Toggle the OCLP boot fan control daemon on/off from the menu.
+-(void)toggleOCLPDaemon:(id)sender {
+    NSMenuItem *item = (NSMenuItem *)sender;
+    if ([OCLPHelper isDaemonInstalled]) {
+        // Uninstall
+        BOOL ok = [OCLPHelper uninstallDaemon];
+        if (ok) {
+            [item setTitle:@"Boot Fan Control: Off"];
+            [item setState:NSOffState];
+        }
+    } else {
+        // Install
+        BOOL ok = [OCLPHelper installDaemon];
+        if (ok) {
+            [item setTitle:@"Boot Fan Control: On"];
+            [item setState:NSOnState];
+        } else {
+            NSAlert *alert = [[NSAlert alloc] init];
+            [alert setMessageText:@"Installation Failed"];
+            [alert setInformativeText:@"Could not install the boot fan control daemon. Admin access may be required."];
+            [alert addButtonWithTitle:@"OK"];
+            [alert runModal];
+        }
+    }
+}
+
 #pragma mark **Slider Menu Actions**
 
 /// Called when user drags a fan slider in the menu.
@@ -559,8 +680,24 @@ NSUserDefaults *defaults;
         [label setStringValue:[NSString stringWithFormat:@"%d rpm", newRPM]];
     }
 
-    // Write the new minimum to SMC
     [FanControl setRights];
+
+    // Determine hardware minimum to decide auto vs forced mode
+    int hwMin = [smcWrapper get_min_speed:fanIndex];
+    if (hwMin <= 0) hwMin = 800;
+
+    if (newRPM <= hwMin) {
+        // Return this fan to automatic mode — clear its force bit in FS!
+        [self setForcedMode:NO forFan:fanIndex];
+    } else {
+        // Force this fan to the requested speed
+        [self setForcedMode:YES forFan:fanIndex];
+        // Set target speed (fpe2 encoded)
+        [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dTg", fanIndex]
+                              value:[@(newRPM) tohex]];
+    }
+
+    // Also set the minimum as a floor
     [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dMn", fanIndex]
                           value:[@(newRPM) tohex]];
 
@@ -572,7 +709,34 @@ NSUserDefaults *defaults;
     [OCLPHelper syncFanSettingsWithDaemon];
 }
 
-/// Apply saved per-fan minimum RPM values to SMC (used on launch and wake).
+/// Set or clear forced mode for a specific fan by manipulating the FS!  bitmask.
+-(void)setForcedMode:(BOOL)forced forFan:(int)fanIndex {
+    // Read current FS!  value (ui16 — 2 bytes, big-endian bitmask)
+    // Bit 0 = fan 0, bit 1 = fan 1, etc.
+    // We try the F{n}Md key first (older Macs), fall back to FS!  (newer Macs).
+    int fanMode = [smcWrapper get_mode:fanIndex];
+    if (fanMode >= 0) {
+        // This Mac has per-fan mode keys (F0Md, F1Md, ...)
+        [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dMd", fanIndex]
+                              value:forced ? @"01" : @"00"];
+    } else {
+        // Use the global FS!  bitmask (ui16)
+        // Read current bitmask — we encode it as a 4-hex-digit string
+        // Unfortunately we can't read FS!  easily through smcWrapper (no API for it),
+        // so we maintain a local cache of which fans are forced.
+        static UInt16 sForceBitmask = 0;
+        if (forced) {
+            sForceBitmask |= (1 << fanIndex);
+        } else {
+            sForceBitmask &= ~(1 << fanIndex);
+        }
+        NSString *hexVal = [NSString stringWithFormat:@"%04x", sForceBitmask];
+        [smcWrapper setKey_external:@"FS! " value:hexVal];
+    }
+}
+
+/// Apply saved per-fan RPM values to SMC (used on launch and wake).
+/// Sets both forced mode + target speed (for real control) and minimum floor.
 -(void)applyPerFanSettings {
     [FanControl setRights];
     for (int i = 0; i < g_numFans; i++) {
@@ -585,8 +749,18 @@ NSUserDefaults *defaults;
         int savedRPM = (int)[[NSUserDefaults standardUserDefaults] integerForKey:prefKey];
         if (savedRPM < hwMin || savedRPM > hwMax) savedRPM = hwMin;
 
+        // Set the minimum floor
         [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dMn", i]
                               value:[@(savedRPM) tohex]];
+
+        // If user has set a speed above the hardware minimum, force the fan
+        if (savedRPM > hwMin) {
+            [self setForcedMode:YES forFan:i];
+            [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dTg", i]
+                                  value:[@(savedRPM) tohex]];
+        } else {
+            [self setForcedMode:NO forFan:i];
+        }
 
         // Also update slider position if sliders exist
         if (i < (int)[_fanSliders count]) {
@@ -973,6 +1147,13 @@ NSUserDefaults *defaults;
 -(void)terminate:(id)sender{
 	//get last active selection
 	[defaults synchronize];
+	// Return all fans to automatic mode on quit (unless OCLP daemon will manage them)
+	if (![OCLPHelper isDaemonInstalled]) {
+		[FanControl setRights];
+		for (int i = 0; i < g_numFans; i++) {
+			[self setForcedMode:NO forFan:i];
+		}
+	}
 	[smcWrapper cleanUp];
 	[_readTimer invalidate];
 	[pw deregisterForSleepWakeNotification];
@@ -1071,10 +1252,9 @@ NSUserDefaults *defaults;
         NSLog(@"Error deleting %@",machinesPath);
     }
     error = nil;
-    if ([[MachineDefaults computerModel] rangeOfString:@"MacBookPro15"].location != NSNotFound) {
-        for (int i=0; i<g_numFans; i++) {
-            [smcWrapper setKey_external:[NSString stringWithFormat:@"F%dMd",i] value:@"00"];
-        }
+    // Return all fans to automatic mode on reset
+    for (int i=0; i<g_numFans; i++) {
+        [self setForcedMode:NO forFan:i];
     }
 
     NSString *domainName = [[NSBundle mainBundle] bundleIdentifier];
