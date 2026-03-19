@@ -61,6 +61,7 @@
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
+		4920FBAF2F6B80A2001BC64C /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4C65C0201AC83BED006E760F /* French */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = French; path = French.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4C65C0211AC83BF2006E760F /* French */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = French; path = French.lproj/MainMenu.nib; sourceTree = "<group>"; };
 		4C65C0221AC83BF7006E760F /* French */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = French; path = French.lproj/F.A.Q.rtf; sourceTree = "<group>"; };
@@ -305,6 +306,7 @@
 				Spanish,
 				Dutch,
 				French,
+				hu,
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* FanControl */;
 			projectDirPath = "";
@@ -389,6 +391,7 @@
 				894DC9E60F8AA399006A046F /* Spanish */,
 				8932CFF913D08DD7008BC447 /* Dutch */,
 				4C65C0201AC83BED006E760F /* French */,
+				4920FBAF2F6B80A2001BC64C /* hu */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
