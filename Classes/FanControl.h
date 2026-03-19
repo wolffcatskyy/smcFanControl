@@ -144,6 +144,8 @@
 - (void)fanSliderChanged:(id)sender;
 - (void)applyPerFanSettings;
 - (void)updateSliderRPMLabels;
+- (void)setForcedMode:(BOOL)forced forFan:(int)fanIndex;
+- (void)toggleOCLPDaemon:(id)sender;
 - (void)openPreferences:(id)sender;
 @end
 
