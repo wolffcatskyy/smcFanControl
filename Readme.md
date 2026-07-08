@@ -24,7 +24,7 @@ Works on all OCLP-patched Macs running supported macOS versions.
 
 ```bash
 brew tap wolffcatskyy/tap
-brew install --cask smcfancontrol
+brew install --cask wolffcatskyy/tap/smcfancontrol
 ```
 
 That's it. No Gatekeeper warnings, no right-click tricks.
