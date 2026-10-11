@@ -1,0 +1,56 @@
+name: macOS build and tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Portable C test (release version parsing)
+        run: |
+          clang -std=c99 -Wall -Wextra -o /tmp/test_release_version tests/test_release_version.c
+          /tmp/test_release_version
+
+      - name: Diagnostic redaction tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Build app (x86_64)
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          FLAGS="-project smcFanControl.xcodeproj -configuration Release ARCHS=x86_64 ONLY_ACTIVE_ARCH=NO MACOSX_DEPLOYMENT_TARGET=10.13 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= SYMROOT=$PWD/build"
+          # smc helper first: the app target copies its product but has no declared dependency on it
+          xcodebuild $FLAGS -target smc build 2>&1 | tee xcodebuild.log
+          xcodebuild $FLAGS -target smcFanControl build 2>&1 | tee -a xcodebuild.log
+
+      - name: Surface build errors
+        if: failure()
+        run: |
+          grep -E "error:|fatal|ld:|BUILD FAILED|The following build commands failed" xcodebuild.log | head -20 | while IFS= read -r l; do echo "::error::${l:0:900}"; done
+          tail -n 15 xcodebuild.log | while IFS= read -r l; do echo "::warning::${l:0:500}"; done
+
+      - name: Check architecture
+        run: |
+          find build -name '*.app' -maxdepth 3
+          lipo -info build/Release/smcFanControl.app/Contents/MacOS/smcFanControl
+
+      - name: Package build
+        run: ditto -c -k --keepParent build/Release/smcFanControl.app smcFanControl-unsigned-x86_64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smcFanControl-unsigned-x86_64
+          path: smcFanControl-unsigned-x86_64.zip
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
