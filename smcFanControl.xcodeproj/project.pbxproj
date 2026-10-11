@@ -30,6 +30,7 @@
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
 		CE26A0012C5F000100AABB01 /* SleepWakeFix.m in Sources */ = {isa = PBXBuildFile; fileRef = CE26A0032C5F000100AABB01 /* SleepWakeFix.m */; };
+		CE26A0042C5F000100AABB01 /* OCLPHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = CE26A0062C5F000100AABB01 /* OCLPHelper.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -103,6 +104,8 @@
 		8D1107320486CEB800E47090 /* smcFanControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = smcFanControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE26A0022C5F000100AABB01 /* SleepWakeFix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SleepWakeFix.h; sourceTree = "<group>"; };
 		CE26A0032C5F000100AABB01 /* SleepWakeFix.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SleepWakeFix.m; sourceTree = "<group>"; };
+		CE26A0052C5F000100AABB01 /* OCLPHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCLPHelper.h; sourceTree = "<group>"; };
+		CE26A0062C5F000100AABB01 /* OCLPHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OCLPHelper.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,6 +147,8 @@
 				892A7F440B10B7700041B493 /* MachineDefaults.m */,
 				CE26A0022C5F000100AABB01 /* SleepWakeFix.h */,
 				CE26A0032C5F000100AABB01 /* SleepWakeFix.m */,
+				CE26A0052C5F000100AABB01 /* OCLPHelper.h */,
+				CE26A0062C5F000100AABB01 /* OCLPHelper.m */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -357,6 +362,7 @@
 				892A7F450B10B7700041B493 /* MachineDefaults.m in Sources */,
 				89148EA315E2543D00A073EE /* NSFileManager+DirectoryLocations.m in Sources */,
 				CE26A0012C5F000100AABB01 /* SleepWakeFix.m in Sources */,
+				CE26A0042C5F000100AABB01 /* OCLPHelper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
