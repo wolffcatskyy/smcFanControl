@@ -23,6 +23,7 @@
  
 
 #import "FanControl.h"
+#include "ReleaseVersion.h"
 #import "MachineDefaults.h"
 #import "SleepWakeFix.h"
 #import "OCLPHelper.h"
@@ -1229,16 +1230,57 @@ NSUserDefaults *defaults;
 }
 
 - (IBAction)updateCheck:(id)sender{
-    // TODO: Implement GitHub Releases-based update check
-    NSAlert *alert = [[NSAlert alloc] init];
-    [alert setMessageText:@"Check for Updates"];
-    [alert setInformativeText:@"Visit the GitHub releases page to check for updates."];
-    [alert addButtonWithTitle:@"Open GitHub"];
-    [alert addButtonWithTitle:@"Cancel"];
-    if ([alert runModal] == NSAlertFirstButtonReturn) {
-        [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://github.com/wolffcatskyy/smcFanControl/releases"]];
-    }
+    // This explicit action is the only network trigger. No background checks.
+    NSAlert *consent = [[NSAlert alloc] init];
+    [consent setMessageText:@"Check GitHub for Updates?"];
+    [consent setInformativeText:@"This contacts GitHub for the latest public release. No fan settings or diagnostics are sent. Updates are never installed automatically."];
+    [consent addButtonWithTitle:@"Check Now"];
+    [consent addButtonWithTitle:@"Cancel"];
+    if ([consent runModal] != NSAlertFirstButtonReturn) return;
+
+    NSURL *endpoint = [NSURL URLWithString:@"https://api.github.com/repos/wolffcatskyy/smcFanControl/releases/latest"];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:endpoint];
+    [request setValue:@"application/vnd.github+json" forHTTPHeaderField:@"Accept"];
+    [request setValue:@"smcFanControl-update-check" forHTTPHeaderField:@"User-Agent"];
+    request.timeoutInterval = 15;
+    NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration ephemeralSessionConfiguration];
+    configuration.HTTPCookieStorage = nil;
+    configuration.URLCredentialStorage = nil;
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+    [[session dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        NSInteger status = [response isKindOfClass:[NSHTTPURLResponse class]] ? [(NSHTTPURLResponse *)response statusCode] : 0;
+        NSDictionary *release = nil;
+        if (!error && status == 200 && data.length <= 1024 * 1024) {
+            id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            if ([parsed isKindOfClass:[NSDictionary class]]) release = parsed;
+        }
+        NSString *tag = [release[@"tag_name"] isKindOfClass:[NSString class]] ? release[@"tag_name"] : nil;
+        NSString *current = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+        int newer = -1;
+        if (tag && [release[@"draft"] isEqual:@NO] && [release[@"prerelease"] isEqual:@NO]) {
+            newer = smc_release_is_newer([tag UTF8String], [current UTF8String]);
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSAlert *result = [[NSAlert alloc] init];
+            [result setMessageText:@"Check for Updates"];
+            if (newer == 1) {
+                [result setInformativeText:[NSString stringWithFormat:@"%@ is available. You are running %@. Open GitHub to review and download it.", tag, current]];
+                [result addButtonWithTitle:@"Open GitHub"];
+                [result addButtonWithTitle:@"Cancel"];
+                if ([result runModal] == NSAlertFirstButtonReturn) {
+                    // Never open a URL supplied by the release response.
+                    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://github.com/wolffcatskyy/smcFanControl/releases"]];
+                }
+            } else {
+                [result setInformativeText:newer == 0 ? @"No newer stable release was found." : @"Could not verify the latest stable release. Try again later or visit GitHub Releases."];
+                [result addButtonWithTitle:@"OK"];
+                [result runModal];
+            }
+        });
+        [session finishTasksAndInvalidate];
+    }] resume];
 }
+
 
 
 -(void)performReset
