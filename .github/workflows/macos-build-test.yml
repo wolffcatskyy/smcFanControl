@@ -25,10 +25,10 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild -version
-          xcodebuild -project smcFanControl.xcodeproj -alltargets -configuration Release \
-            ARCHS=x86_64 ONLY_ACTIVE_ARCH=NO MACOSX_DEPLOYMENT_TARGET=10.13 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            SYMROOT="$PWD/build" build 2>&1 | tee xcodebuild.log
+          FLAGS="-project smcFanControl.xcodeproj -configuration Release ARCHS=x86_64 ONLY_ACTIVE_ARCH=NO MACOSX_DEPLOYMENT_TARGET=10.13 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= SYMROOT=$PWD/build"
+          # smc helper first: the app target copies its product but has no declared dependency on it
+          xcodebuild $FLAGS -target smc build 2>&1 | tee xcodebuild.log
+          xcodebuild $FLAGS -target smcFanControl build 2>&1 | tee -a xcodebuild.log
 
       - name: Surface build errors
         if: failure()
