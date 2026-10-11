@@ -30,6 +30,12 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             SYMROOT="$PWD/build" build 2>&1 | tee xcodebuild.log
 
+      - name: Surface build errors
+        if: failure()
+        run: |
+          grep -E "error:|fatal|ld:|BUILD FAILED|The following build commands failed" xcodebuild.log | head -20 | while IFS= read -r l; do echo "::error::${l:0:900}"; done
+          tail -n 15 xcodebuild.log | while IFS= read -r l; do echo "::warning::${l:0:500}"; done
+
       - name: Check architecture
         run: |
           find build -name '*.app' -maxdepth 3
