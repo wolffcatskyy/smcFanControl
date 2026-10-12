@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5B64D910307D4DB8001E3E63 /* Machines.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5B64D90F307D4DB8001E3E63 /* Machines.plist */; };
 		89033CA70B80E1EB00FDAF43 /* F.A.Q.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 89033CA60B80E1EB00FDAF43 /* F.A.Q.rtf */; };
 		89148EA315E2543D00A073EE /* NSFileManager+DirectoryLocations.m in Sources */ = {isa = PBXBuildFile; fileRef = 89148EA115E2543D00A073EE /* NSFileManager+DirectoryLocations.m */; };
 		891683E90AEBD95B00888535 /* smcWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 891683E80AEBD95B00888535 /* smcWrapper.m */; };
@@ -24,7 +25,6 @@
 		89949E8D0AEEA37700077E93 /* Power.m in Sources */ = {isa = PBXBuildFile; fileRef = 89949E8C0AEEA37700077E93 /* Power.m */; };
 		899D59DC15E1CF60003E322D /* smc in CopyFiles */ = {isa = PBXBuildFile; fileRef = 8924ECEE15AC96E70031730C /* smc */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		89B243200B7E351000CAD103 /* smcfancontrol_v2.icns in Resources */ = {isa = PBXBuildFile; fileRef = 89B2431F0B7E351000CAD103 /* smcfancontrol_v2.icns */; };
-		89E7D3650ADE819B000F67AB /* Machines.plist in Resources */ = {isa = PBXBuildFile; fileRef = 89E7D3640ADE819B000F67AB /* Machines.plist */; };
 		89FE24230B7F4CD300D2713C /* MainMenu.nib in Resources */ = {isa = PBXBuildFile; fileRef = 89FE24210B7F4CD300D2713C /* MainMenu.nib */; };
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
@@ -65,6 +65,10 @@
 		4C65C0201AC83BED006E760F /* French */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = French; path = French.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4C65C0211AC83BF2006E760F /* French */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = French; path = French.lproj/MainMenu.nib; sourceTree = "<group>"; };
 		4C65C0221AC83BF7006E760F /* French */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = French; path = French.lproj/F.A.Q.rtf; sourceTree = "<group>"; };
+		5B64D909307D46E0001E3E63 /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = "pt-BR"; path = "pt-BR.lproj/MainMenu.nib"; sourceTree = "<group>"; };
+		5B64D90A307D46E6001E3E63 /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = "pt-BR"; path = "pt-BR.lproj/F.A.Q.rtf"; sourceTree = "<group>"; };
+		5B64D90B307D4D86001E3E63 /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		5B64D90F307D4DB8001E3E63 /* Machines.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Machines.plist; sourceTree = "<group>"; };
 		89033CA10B80E1DF00FDAF43 /* English */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = English; path = English.lproj/F.A.Q.rtf; sourceTree = "<group>"; };
 		89033D900B80F61E00FDAF43 /* German */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = German; path = German.lproj/F.A.Q.rtf; sourceTree = "<group>"; };
 		89148EA115E2543D00A073EE /* NSFileManager+DirectoryLocations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSFileManager+DirectoryLocations.m"; sourceTree = "<group>"; };
@@ -96,13 +100,13 @@
 		89B2431F0B7E351000CAD103 /* smcfancontrol_v2.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = smcfancontrol_v2.icns; sourceTree = "<group>"; };
 		89C053BC0ADAB7630037CA16 /* smc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = smc.c; sourceTree = "<group>"; };
 		89C053BD0ADAB7630037CA16 /* smc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = smc.h; sourceTree = "<group>"; };
-		89E7D3640ADE819B000F67AB /* Machines.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = Machines.plist; sourceTree = "<group>"; };
 		89FE24220B7F4CD300D2713C /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = English.lproj/MainMenu.nib; sourceTree = "<group>"; };
 		89FE24280B7F4CE900D2713C /* German */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = German; path = German.lproj/MainMenu.nib; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* smcFanControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = smcFanControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE26A0022C5F000100AABB01 /* SleepWakeFix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SleepWakeFix.h; sourceTree = "<group>"; };
 		CE26A0032C5F000100AABB01 /* SleepWakeFix.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SleepWakeFix.m; sourceTree = "<group>"; };
+		F5FE31EA65344848B1BE1E13 /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/Localizable.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,7 +213,7 @@
 				89033CA60B80E1EB00FDAF43 /* F.A.Q.rtf */,
 				89FE24210B7F4CD300D2713C /* MainMenu.nib */,
 				89B2431F0B7E351000CAD103 /* smcfancontrol_v2.icns */,
-				89E7D3640ADE819B000F67AB /* Machines.plist */,
+				5B64D90F307D4DB8001E3E63 /* Machines.plist */,
 				089C165CFE840E0CC02AAC07 /* InfoPlist.strings */,
 				893506170B440255001BFBA5 /* Localizable.strings */,
 			);
@@ -307,6 +311,7 @@
 				Dutch,
 				French,
 				hu,
+				"pt-BR",
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* FanControl */;
 			projectDirPath = "";
@@ -324,7 +329,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */,
-				89E7D3650ADE819B000F67AB /* Machines.plist in Resources */,
+				5B64D910307D4DB8001E3E63 /* Machines.plist in Resources */,
 				893506180B440255001BFBA5 /* Localizable.strings in Resources */,
 				89B243200B7E351000CAD103 /* smcfancontrol_v2.icns in Resources */,
 				89FE24230B7F4CD300D2713C /* MainMenu.nib in Resources */,
@@ -367,6 +372,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				089C165DFE840E0CC02AAC07 /* English */,
+				5B64D90B307D4D86001E3E63 /* pt-BR */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -379,6 +385,7 @@
 				894DC9E30F8AA36F006A046F /* Spanish */,
 				8932CFF813D08DC4008BC447 /* Dutch */,
 				4C65C0221AC83BF7006E760F /* French */,
+				5B64D90A307D46E6001E3E63 /* pt-BR */,
 			);
 			name = F.A.Q.rtf;
 			sourceTree = "<group>";
@@ -392,6 +399,7 @@
 				8932CFF913D08DD7008BC447 /* Dutch */,
 				4C65C0201AC83BED006E760F /* French */,
 				4920FBAF2F6B80A2001BC64C /* hu */,
+				F5FE31EA65344848B1BE1E13 /* pt-BR */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -404,6 +412,7 @@
 				894DC9E20F8AA367006A046F /* Spanish */,
 				8932CFFA13D08DDF008BC447 /* Dutch */,
 				4C65C0211AC83BF2006E760F /* French */,
+				5B64D909307D46E0001E3E63 /* pt-BR */,
 			);
 			name = MainMenu.nib;
 			sourceTree = "<group>";

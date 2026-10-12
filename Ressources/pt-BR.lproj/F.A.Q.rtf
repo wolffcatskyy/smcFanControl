@@ -1,0 +1,80 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2907
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fswiss\fcharset0 Helvetica-Bold;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid1\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid1}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}}
+\paperw12240\paperh15840\vieww10800\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs62 \cf0 F.A.Q for smcFanControl 2.6\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\fs24 \cf0 \
+
+\f1\b Quando uso smcFanControl e configuro uma nova velocidade m\'ednima, meus ventiladores v\'e3o acelerar se a carga da CPU aumentar?
+\f0\b0 \uc0\u8232 Sim, a velocidade do ventilador vai aumentar seguindo o padr\'e3o da Apple. smcFanControl permite que os ventiladores continuem no modo autom\'e1tico e apenas altera os valores de velocidade m\'ednima. Contudo, quanto maior for a velocidade m\'ednima, mais tempo vai demorar para a velocidade aumentar.\
+\
+
+\f1\b Por que o smcFanControl pede login e senha, e qual login/senha devo preencher?
+\f0\b0 \uc0\u8232 smcFanControl precisa de credenciais de um usu\'e1rio administrador para configurar as permiss\'f5es de alterar a velocidade dos ventiladores. Voc\'ea s\'f3 precisa preencher uma vez. O login e a senha preenchidos n\'e3o s\'e3o salvos pelo smcFanControl. Eles s\'e3o apenas usados para configurar as permiss\'f5es necess\'e1rias.\
+\
+
+\f1\b Recebo um aviso "smcFanControl ainda n\'e3o foi testado nesta m\'e1quina". O que isso significa?
+\f0\b0 \uc0\u8232 Tecnicamente o smcFanControl suporta qualquer Mac Apple Silicon e Intel, mas n\'e3o vem com os padr\'f5es de cada m\'e1quina. Se voc\'ea recebe o aviso, o smcFanControl tenta ler os detalhes dos ventiladores diretamente do System Management Controller. Se voc\'ea seguir as instru\'e7\'f5es (sem qualquer outro controlador de ventiladores), n\'e3o deve ter nenhum problema para usar o smcFanControl em uma m\'e1quina n\'e3o testada.\
+\
+
+\f1\b Como posso restaurar os valores padr\'e3o da Apple para a velocidade dos ventiladores?
+\f0\b0 \uc0\u8232 Mova os controles totalmente para a esquerda e clique em Aplicar. Os valores mais baixos que o smcFanControl permite s\'e3o os padr\'f5es da Apple. A velocidade m\'ednima padr\'e3o ap\'f3s a \'faltima atualiza\'e7\'e3o de firmware do SMC da Apple \'e9 1000 rpm para o MBP 15,4", 1500 rpm para o MB 13,3", 2000 rpm para o Core2Duo MBP e 1800 rpm para o Core2Duo MB.\
+\
+
+\f1\b Por que n\'e3o consigo definir a velocidade m\'ednima para 0 rpm?
+\f0\b0 \uc0\u8232 O smcFanControl s\'f3 permite definir a velocidade do ventilador entre os valores m\'ednimo e m\'e1ximo da Apple. Definir como zero \'e9 poss\'edvel do ponto de vista t\'e9cnico, mas provavelmente poderia danificar sua m\'e1quina.\
+\
+
+\f1\b Quando as novas configura\'e7\'f5es de velocidade m\'ednima s\'e3o perdidas?
+\f0\b0 \uc0\u8232 As configura\'e7\'f5es que voc\'ea escolheu para a velocidade m\'ednima s\'e3o perdidas em dois casos, e a m\'e1quina volta aos valores padr\'e3o:\u8232 a) Voc\'ea entra em repouso e o smcFanControl n\'e3o est\'e1 em execu\'e7\'e3o (se estiver em execu\'e7\'e3o, ele observa o repouso e reaplica suas configura\'e7\'f5es quando a m\'e1quina desperta).\u8232 b) Voc\'ea desliga a m\'e1quina.\
+\
+
+\f1\b Qual sensor \'e9 lido para a temperatura?
+\f0\b0 \uc0\u8232 N\'e3o \'e9 o sensor das CPUs CoreDuo. A vantagem \'e9 que n\'e3o h\'e1 Kernel Extension carregada para leitura de temperatura, e a temperatura deve ser sempre reportada (infelizmente, alguns CoreDuo param de reportar a temperatura depois de alguns minutos). A leitura do sensor fica bem pr\'f3xima do que o CoreDuoTemp reporta, mas n\'e3o \'e9 exatamente a mesma por causa de sensores diferentes.\
+\
+
+\f1\b E o controle dos ventiladores quando estou no Windows com Boot Camp?
+\f0\b0 \uc0\u8232 No momento, voc\'ea n\'e3o consegue definir a velocidade m\'ednima no Windows (pois o smcFanControl \'e9 um aplicativo nativo do OS X). Por\'e9m, se voc\'ea configurar uma nova velocidade m\'ednima no OS X com o smcFanControl e depois reiniciar no Windows, suas configura\'e7\'f5es n\'e3o s\'e3o perdidas e essa nova velocidade m\'ednima \'e9 usada no Windows durante aquela sess\'e3o. Algumas pessoas relatam usar isso para deixar o MBP mais fresco e evitar travamentos ao jogar no Windows.\
+\
+
+\f1\b Haver\'e1 uma vers\'e3o do smcFanControl para PowerBooks ou outros Macs baseados em PPC?
+\f0\b0 \uc0\u8232 N\'e3o. Macs baseados em PPC n\'e3o t\'eam um controlador SMC. Ent\'e3o a abordagem do smcFanControl n\'e3o funciona. \'c9 poss\'edvel que existam solu\'e7\'f5es para controlar a velocidade dos ventiladores em Macs PPC, mas n\'e3o conhe\'e7o nenhuma.\
+\
+
+\f1\b Haver\'e1 um widget do Dashboard para o smcFanControl?
+\f0\b0 \uc0\u8232 Acho que \'e9 uma boa ideia. No momento estou trabalhando em melhorar o smcFanControl como aplicativo. Mas talvez outra pessoa seja uma boa desenvolvedora de Dashboard. O c\'f3digo-fonte GPL do smcFanControl deve ser um bom ponto de partida.\
+\
+
+\f1\b N\'e3o seria ainda melhor ler a temperatura e ajustar a velocidade dos ventiladores com base nisso, em vez de s\'f3 definir a velocidade m\'ednima e deixar o controle autom\'e1tico da Apple fazer o resto?
+\f0\b0 \uc0\u8232 Sim, essa abordagem \'e9 ainda melhor e poderia deixar sua m\'e1quina mais fresca sob cargas altas. MAS: eu n\'e3o escolhi esse caminho para o smcFanControl porque tem alguns riscos. Ajustar a velocidade do ventilador conforme a temperatura da CPU exige um programa em execu\'e7\'e3o em segundo plano (por exemplo, um daemon) que ajuste a velocidade continuamente. Se esse programa travar ou ficar incompat\'edvel por causa de uma atualiza\'e7\'e3o do sistema (ou se as leituras do sensor de temperatura ficarem inadequadas), os ventiladores poderiam ser definidos para uma velocidade errada (baixa demais), e isso provavelmente poderia danificar a m\'e1quina. Al\'e9m disso, a l\'f3gica de controle dos ventiladores \'e9 bem complicada. Um Mac tem cerca de 10 sensores de temperatura, que s\'e3o lidos continuamente e usados para monitoramento e para definir as velocidades certas. Ent\'e3o n\'e3o seria "t\'e3o \'f3timo" ler s\'f3 a temperatura da CPU como base para o controle dos ventiladores.\
+\
+
+\f1\b Tenho um MBP e o smcFanControl est\'e1 reportando 0 rpm para um dos meus ventiladores?
+\f0\b0 \uc0\u8232 Nesse caso, o ventilador n\'e3o reportou nenhum valor para o smcFanControl. \'c9 poss\'edvel que um dos seus ventiladores n\'e3o esteja funcionando. Por favor, teste seu computador com o Apple Hardware Test (est\'e1 em um DVD que vem com o computador) e veja se reporta alguma falha nos ventiladores.\
+\
+
+\f1\b Quais s\'e3o as principais diferen\'e7as entre a vers\'e3o 1.2.x e a 2.x do smcFanControl?
+\f0\b0 \
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls1\ilvl0\cf0 \expnd0\expndtw0\kerning0
+{\listtext	\'95	}A vers\'e3o 2.x \'e9 uma refatora\'e7\'e3o completa da aplica\'e7\'e3o.\
+{\listtext	\'95	}A vers\'e3o 1.x era uma aplica\'e7\'e3o "comum" no Dock. A vers\'e3o 2.x fica na barra de menus para acesso mais r\'e1pido \'e0s configura\'e7\'f5es dos ventiladores, monitoramento mais f\'e1cil e uma experi\'eancia de usu\'e1rio melhor.\
+{\listtext	\'95	}A vers\'e3o 2.x suporta qualquer Mac Intel.\
+{\listtext	\'95	}Na vers\'e3o 2.x, voc\'ea pode salvar configura\'e7\'f5es diferentes como favoritos e ativ\'e1-los com um \'fanico clique.\
+{\listtext	\'95	}Em notebooks, as configura\'e7\'f5es podem ser aplicadas automaticamente quando a fonte de energia muda, para que voc\'ea possa resfriar seu MacBook automaticamente enquanto estiver carregando a bateria (o que tipicamente esquenta o computador).\
+{\listtext	\'95	}A vers\'e3o 2.x tem a op\'e7\'e3o de "Iniciar smcFanControl ao ligar".\
+{\listtext	\'95	}A vers\'e3o 2.x usa a autentica\'e7\'e3o padr\'e3o do OS X.\
+{\listtext	\'95	}A vers\'e3o 2.x usa o Sparkle Framework para buscar atualiza\'e7\'f5es automaticamente.\
+\
+\pard\pardeftab720\sa320\partightenfactor0
+
+\f1\b \cf0 C\'f3digo fonte:
+\f0\b0  https://github.com/hholtmann/smcFanControl\
+}
