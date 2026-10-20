@@ -1,147 +1,44 @@
 # smcFanControl Community Edition
 
-An experimental [native controller and lightweight successor interface](Controller/README.md) is being developed separately. It adds a single boot-time hardware owner, typed policies, and an independent watchdog. It is not yet a validated replacement for the legacy app.
+Free, GPL-licensed fan-control software for Intel Macs, based on [Hendrik Holtmann's smcFanControl](https://github.com/hholtmann/smcFanControl).
 
-**Homepage:** [wolffcatskyy.dev/smcfancontrol](https://wolffcatskyy.dev/smcfancontrol)
+This repository contains the legacy macOS application and **Cooling CE**, an experimental native successor. Cooling CE is being reviewed in [draft PR #38](https://github.com/wolffcatskyy/smcFanControl/pull/38); it is not a released replacement. Neither implementation has verified support for every Intel Mac. Apple Silicon is outside this project's scope.
 
-Community-maintained fork of [smcFanControl](https://github.com/hholtmann/smcFanControl) for Intel Macs. Set a minimum fan speed to keep your Mac running cooler.
+## Choose the right component
 
----
+| Component | Purpose | Status |
+| --- | --- | --- |
+| Legacy app (`Classes/`, Xcode project) | Menu-bar minimum fan speeds and existing preferences | Existing release lineage; this work does not rebuild or validate its release artifacts |
+| [Cooling CE](Controller/README.md) | C boot controller, Objective-C menu app, CLI and independent watchdog | Experimental; physical pilot on one MacPro6,1 |
+| [OCLP boot helper](FanControlHelper/INTEGRATION.md) | Apply saved minimums once at boot | Separate legacy integration; no continuous supervision |
+| [Older boot helper](smclegacy-daemon/INSTALL.md) | Another historical one-shot minimum writer | Retained for reference/migration |
+| [Raw SMC CLI](smc-command/README.md) | Developer reads and low-level access | Not the Cooling CE policy CLI |
+| [Update Guardian](UpdateGuardian/README.md) | Optional update-preference changes | Separate from fan control; no compatibility guarantee |
 
-## 🔥 NEW: Boot-Time Fan Control for OCLP Macs
+Use one fan controller at a time. A one-shot helper can still conflict when it runs at boot. Cooling CE does not use the legacy app's per-user preferences or boot-helper plist.
 
-Fans screaming at 100% on your OpenCore-patched Mac? Not anymore. smcFanControl now applies your fan settings **at boot, before you even log in** — the first fan control app to support this.
+## Existing releases
 
-- Auto-detects OCLP (OpenCore Legacy Patcher) installations
-- Applies saved fan speeds via Launch Daemon before login screen
-- Zero overhead — runs once at boot, then exits
+Get published legacy artifacts from [GitHub Releases](https://github.com/wolffcatskyy/smcFanControl/releases). Read the selected release's requirements and contents; a source branch or draft PR is not a release. Review unsigned downloads before granting administrator access. macOS security prompts depend on the artifact, quarantine state and system policy; no installation method here guarantees their absence.
 
-Works on all OCLP-patched Macs running supported macOS versions.
+The project's Homebrew tap has historically provided `wolffcatskyy/tap/smcfancontrol`. Its current cask and artifact must be checked independently before installation; it does not install this candidate merely because the candidate source is present here.
 
-👉 [How it works →](#oclp-boot-fan-control)
+## Cooling CE development
 
----
+Start with the [candidate build and operation guide](Controller/README.md), [architecture](Controller/ARCHITECTURE.md), [testing instructions](Controller/TESTING.md), [recovery guide](Controller/RECOVERY.md), and [dated validation record](Controller/VALIDATION.md).
 
-## Install
+The candidate centralizes hardware writes in one system service, so user login, locking, switching and GUI exit do not intentionally start another controller or replace system policy. Boot launch is configured; a cold boot before login and fast user switching still require physical verification. The corrected automatic-to-maximum transition also awaits the final privileged pilot test.
 
-```bash
-brew tap wolffcatskyy/tap
-brew install --cask wolffcatskyy/tap/smcfancontrol
-```
+Implementation is C plus Objective-C/AppKit using system frameworks. No Rust, Python or browser runtime is required to run it. Smaller footprint is a design goal, not a demonstrated claim of being fastest or smallest. Comprehensive sensors, alerts, history, multi-sensor rules and commercial feature parity remain future work. See the [roadmap](ROADMAP.md).
 
-That's it. No Gatekeeper warnings, no right-click tricks.
+## Legacy features and documentation
 
-### Why Homebrew?
+The legacy source includes power-management handling, minimum-speed controls, locale/UI changes and optional sleep/update helpers. Their presence in source does not establish that every packaged release includes them or that they resolve a particular machine's problem. Sleep-related system changes are not a general cure for EFI panics. OCLP detection is heuristic and does not prove fan or update compatibility.
 
-macOS Gatekeeper blocks apps downloaded from the internet that aren't signed with an Apple Developer certificate ($99/year). When you try to open an unsigned app, macOS refuses with *"app can't be opened because Apple cannot check it for malicious software"* — and there's no "Open Anyway" button on first attempt.
+The localized `Ressources/*/F.A.Q.rtf` files are historical smcFanControl 2.6 help. Their app-only uninstall instructions do **not** remove separately installed system helpers or Cooling CE; use the relevant component's guide.
 
-Homebrew bypasses this entirely by stripping the quarantine flag during install, giving you a clean one-command experience with no security dialogs or workarounds.
+## Contributing and security
 
-### Manual install (no Homebrew)
+Report ordinary bugs through [issues](https://github.com/wolffcatskyy/smcFanControl/issues), with model, macOS version, component/build, policy, measured RPM and reproduction steps. Distinguish expected behavior from observed results. See [SECURITY.md](SECURITY.md) for vulnerability reporting and privilege boundaries.
 
-Download the `.zip` from [GitHub Releases](https://github.com/wolffcatskyy/smcFanControl/releases), extract it, and move `smcFanControl.app` to `/Applications`.
-
-If macOS blocks the app from opening:
-
-1. Right-click (or Control-click) smcFanControl.app and select **Open**
-2. Click **Open** in the dialog that appears
-3. Alternatively, go to **System Settings > Privacy & Security** and click **Open Anyway**
-
-Homebrew installs bypass Gatekeeper automatically.
-
-## Bug Fixes
-
-### Power management fan clamping fix
-
-The original smcFanControl had a bug in `FanControl.m` where the power management handler would clamp fan speeds incorrectly on AC/battery transitions. When switching between power sources, the fan speed logic could override user-set minimums or fail to apply the correct speed, causing fans to not respond properly to manual adjustments.
-
-This fork fixes the clamping behavior so fan speeds are applied reliably regardless of power state changes.
-
-## Features
-
-- **Simple fan slider** — Set-and-forget minimum RPM per fan, no profiles needed
-- **Sleep/Wake Fix** — One-click fix for "Sleep Wake Failure in EFI" panics on older Intel Macs (reversible)
-- **Boot-time fan daemon** — Optional LaunchDaemon applies fan settings before login, before you even log in
-- **Icon-only menu bar** — Minimal CPU usage; no temperature/RPM clutter unless you want it
-- **Auto-detect temperature unit** — Celsius or Fahrenheit from system locale, no manual setting
-- **OCLP Update Guardian** — Blocks incompatible macOS updates on OCLP-patched Macs
-- **Lightweight** — ~94% smaller than original (Sparkle framework removed)
-
-## OCLP Boot Fan Control
-
-If you're running [OpenCore Legacy Patcher](https://dortania.github.io/OpenCore-Legacy-Patcher/) (OCLP) on an unsupported Mac, fans typically run at 100% from boot until smcFanControl starts — which only happens after you log in.
-
-The **OCLP Boot Fan Daemon** fixes this by applying your saved fan settings at boot, before login. On first launch, smcFanControl auto-detects OCLP and offers to install the daemon.
-
-**How it works:**
-- A small LaunchDaemon (`smcfancontrold`) runs once at boot
-- It reads your saved fan settings from `/Library/Application Support/smcFanControl/fan-settings.plist`
-- It applies fan minimum RPMs via SMC, then exits
-- Settings are synced automatically whenever you adjust fan speeds in the app
-
-**Manual install (advanced):**
-```bash
-cd FanControlHelper
-make
-sudo make install
-# Edit fan settings:
-sudo cp fan-settings-example.plist "/Library/Application Support/smcFanControl/fan-settings.plist"
-```
-
-**Manual uninstall:**
-```bash
-cd FanControlHelper
-sudo make uninstall
-```
-
-See [`FanControlHelper/INTEGRATION.md`](FanControlHelper/INTEGRATION.md) for full technical details.
-
-## OCLP Update Guardian
-
-Automatically blocks macOS updates that aren't yet supported by OpenCore Legacy Patcher.
-
-When enabled, the guardian checks OCLP's latest release to see which macOS versions are supported. If Apple offers an update that OCLP hasn't confirmed compatible, notifications are suppressed and automatic downloads are blocked. When OCLP releases support for that version, updates flow through normally.
-
-A daily LaunchDaemon re-checks automatically, since macOS tends to reset update preferences and OCLP releases new versions.
-
-**Emergency abort:** If an update accidentally starts downloading, use `--abort` to kill the download and purge staged files.
-
-```bash
-sudo updateguardian --enable     # Turn on
-sudo updateguardian --disable    # Turn off
-sudo updateguardian --status     # Show current state
-sudo updateguardian --check      # Check OCLP compatibility now
-sudo updateguardian --abort      # Kill staged download (emergency)
-```
-
-See [`UpdateGuardian/`](UpdateGuardian/) for implementation details.
-
-## smc CLI
-
-A standalone `smc` binary for reading SMC sensors and fan speeds from the terminal is included in releases. When installing via Homebrew, it is included automatically.
-
-## What Changed from Upstream
-
-- **Fixed power management clamping bug** — Fan speeds now apply reliably across AC/battery transitions
-- Stripped Apple Silicon code (Intel-only fork)
-- Fixed 16 deprecated macOS APIs
-- Removed Sparkle auto-updater framework (5.3 MB)
-- Removed dead code and unused classes
-- Merged community PRs (#143, #146, #108)
-- **Sleep/Wake Fix** — One-click fix for sleep panics
-- **Simple slider control** — No profiles, just set minimum RPM per fan
-- **Boot daemon** — LaunchDaemon for pre-login fan control
-- **Auto-detect locale** — Temperature unit (°C/°F) from system locale
-- **Modern UI** — SF Symbol fan icon, system fonts, dark mode support
-- **Icon-only menu bar** — Minimal CPU usage, optional temperature/RPM display
-- **Fixed auth error** — Works on modern macOS without deprecated APIs
-- **OCLP Update Guardian** — Simple on/off toggle blocks incompatible updates automatically
-- **Ko-fi donation link** — Support the maintainer
-
-## License
-
-GPL v2 (inherited from upstream).
-
-## Credits
-
-Original by [Hendrik Holtmann](https://github.com/hholtmann). Community fork by [wolffcatskyy](https://github.com/wolffcatskyy).
+GPL v2 lineage and attribution are retained; see [LICENSE](LICENSE) and source-file notices. Original project by Hendrik Holtmann; community fork by [wolffcatskyy](https://github.com/wolffcatskyy). The candidate uses inherited open-source SMC code and independently implemented policies; it contains no imported commercial binary code or sensor tables.
