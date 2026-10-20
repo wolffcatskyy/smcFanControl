@@ -1,0 +1,6 @@
+build/
+test-daemon
+test-cli
+test-policy
+__pycache__/
+*.plist.new

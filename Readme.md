@@ -1,5 +1,7 @@
 # smcFanControl Community Edition
 
+An experimental [native controller and lightweight successor interface](Controller/README.md) is being developed separately. It adds a single boot-time hardware owner, typed policies, and an independent watchdog. It is not yet a validated replacement for the legacy app.
+
 **Homepage:** [wolffcatskyy.dev/smcfancontrol](https://wolffcatskyy.dev/smcfancontrol)
 
 Community-maintained fork of [smcFanControl](https://github.com/hholtmann/smcFanControl) for Intel Macs. Set a minimum fan speed to keep your Mac running cooler.
