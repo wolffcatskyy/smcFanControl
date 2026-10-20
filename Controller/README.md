@@ -63,6 +63,8 @@ smcfanctl SET 0 curve TC0P 50 80
 
 Example temperatures/RPM are illustrative, not model-specific recommendations. Unsupported keys, invalid limits and non-admin write attempts must fail instead of guessing.
 
+See [the dated validation record](VALIDATION.md) for physical observations and remaining gates.
+
 ## Tests and limits
 
 ```sh
