@@ -29,3 +29,15 @@
 ## Incident separation
 
 The separate Linux host rebooted at 11:20 AM after its previous journal ended abruptly around 11:18. No cause was established from the checked logs. The new Linux fan integration was not installed there, and the native macOS candidate had only been compiled at that point. mp6 retained uptime of approximately 16 hours. This does not establish a cause or prove an unrelated event.
+
+## Physical regression discovered during update
+
+The first watchdog stall test passed: controller PID 19720 was replaced with 20157 and the fan stayed near 2141 RPM; the watchdog heartbeat subsequently resumed. The macOS unified log records the watchdog restart. This test began with manual mode already latched and therefore did not test the automatic-to-manual transition.
+
+A subsequent binary update released fans to automatic mode on shutdown. The replacement failed target verification and fell back to firmware control. The initial target-before-force write order was incorrect for this transition. Cooling was restored remotely through a verified minimum floor, establishing manual mode at the then-current target, and reselecting maximum. Independent readings returned to 2140–2141 RPM. Sampled CPU/GPU temperatures at the time were about 45 C and 52–54 C; these readings do not erase the failed transition.
+
+The production backend now enables manual ownership before writing/verifying its target. A native regression test links that actual backend to SMC fixtures that immediately overwrite automatic-mode targets. It covers auto-to-maximum, auto-to-manual, minimum-to-maximum, target-write failures, restoration and unrelated force bits. It passes. Emergency fallback now tries a maximum minimum-floor boost before relinquishing firmware control.
+
+The initial administrator group enumeration also incorrectly rejected the administrator test account. It has been replaced with Apple's membership API. The production membership helper accepts root and the administrator UID and rejects nobody. After the membership update, the administrator successfully made real socket policy requests; a full non-admin socket check is included in the prepared update script.
+
+`update-verified-mp6.sh` is staged for a final authenticated update. It checks the actual automatic-to-maximum transition, administrator and non-administrator socket requests, physical RPM, and repeat watchdog recovery, with a fixed-speed rollback attempt on failure. Until that script passes, the corrected transition remains software-regression-tested rather than physically validated.

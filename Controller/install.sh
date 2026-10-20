@@ -42,11 +42,13 @@ for label in dev.wolffcatskyy.smcfan-ce dev.wolffcatskyy.smcfan-ce-watchdog; do
     if [[ "$label" == dev.wolffcatskyy.smcfan-ce ]]; then
         ready=0
         for _ in {1..30}; do
-            if /usr/local/bin/smcfanctl STATUS >/dev/null 2>&1; then ready=1; break; fi
+            if state=$(/usr/local/bin/smcfanctl STATUS 2>/dev/null); then
+                if [[ "$state" == *'"error":0'* ]]; then ready=1; break; fi
+            fi
             sleep 0.1
         done
         [[ "$ready" == 1 ]] || { echo 'Controller did not become ready' >&2; exit 1; }
     fi
 done
 /usr/local/bin/smcfanctl STATUS
-printf '%s\n' 'Controller and independent watchdog installed for boot. Default policy leaves fans unmanaged until an administrator selects a mode.'
+printf '%s\n' 'Controller and independent watchdog installed for boot; saved policy retained. A first installation without a saved policy starts unmanaged.'

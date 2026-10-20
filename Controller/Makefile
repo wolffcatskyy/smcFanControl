@@ -7,8 +7,8 @@ CORE = policy.c decode.c
 all: $(OUT)/probe $(OUT)/smcfan-ce-daemon $(OUT)/smcfanctl $(OUT)/smcfan-ce-watchdog $(OUT)/Cooling\ CE.app/Contents/MacOS/CoolingCE
 $(OUT):
 	mkdir -p $(OUT)
-$(OUT)/smcfan-ce-daemon: daemon.c $(BACKEND) $(CORE) backend.h policy.h client.h | $(OUT)
-	$(CC) $(CFLAGS) $(LDFLAGS) daemon.c $(BACKEND) $(CORE) -framework IOKit -framework CoreFoundation -o $@
+$(OUT)/smcfan-ce-daemon: daemon.c auth_macos.c auth.h $(BACKEND) $(CORE) backend.h policy.h client.h | $(OUT)
+	$(CC) $(CFLAGS) $(LDFLAGS) daemon.c auth_macos.c $(BACKEND) $(CORE) -framework IOKit -framework CoreFoundation -o $@
 $(OUT)/probe: probe.c $(BACKEND) $(CORE) backend.h policy.h | $(OUT)
 	$(CC) $(CFLAGS) $(LDFLAGS) probe.c $(BACKEND) $(CORE) -framework IOKit -framework CoreFoundation -o $@
 $(OUT)/smcfanctl: cli.c client.h | $(OUT)
@@ -24,3 +24,9 @@ $(OUT)/Cooling\ CE.app/Contents/MacOS/CoolingCE: MenuApp.m client.h $(OUT)/smcfa
 clean:
 	rm -rf $(OUT)
 .PHONY: all clean
+
+# Explicit pilot rollback helper; not part of the normal application bundle.
+recovery: $(OUT)/recovery-max
+$(OUT)/recovery-max: RecoveryMax.c ../smc-command/smc.c ../smc-command/smc.h | $(OUT)
+	$(CC) $(CFLAGS) $(LDFLAGS) RecoveryMax.c -framework IOKit -framework CoreFoundation -o $@
+.PHONY: recovery

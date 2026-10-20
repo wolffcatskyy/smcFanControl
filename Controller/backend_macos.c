@@ -148,9 +148,14 @@ int ce_hw_apply(int fan, enum ce_mode mode, int rpm) {
   }
   char k[5];
   fan_key(k, fan, "Mn");
-  if (write_value(k, originals[fan]) || write_rpm(fan, "Tg", rpm))
+  /* Establish manual ownership before verifying Tg: firmware can overwrite
+   * targets while automatic mode is still active. This transition must work
+   * from a cold/automatic state, not just when a previous helper left FS! set.
+   */
+  if (write_value(k, originals[fan]) || force(fan, 1) ||
+      write_rpm(fan, "Tg", rpm))
     return -1;
-  return force(fan, 1);
+  return 0;
 }
 int ce_hw_baseline(int fan, int replacement) {
   if (fan < 0 || fan >= count || !have_original[fan])

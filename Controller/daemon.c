@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #define _DARWIN_C_SOURCE
+#include "auth.h"
 #include "backend.h"
 #include "client.h"
 #include <fcntl.h>
@@ -96,7 +97,7 @@ static int load_state(void) {
       }
       seen[fan] = 1;
     } else if (sscanf(line, "MAX %d %d %c", &fan, &rpm, &extra) == 2) {
-      if (fan < 0 || fan >= fan_count || !seen[fan] ||
+      if (fan < 0 || fan >= fan_count || !seen[fan] || rpm <= 0 ||
           ce_hw_limit_override(fan, rpm) < 0) {
         result = -1;
         break;
@@ -135,8 +136,15 @@ static int target_for(int fan, struct ce_policy p, double elapsed) {
 }
 static int safe_max(int fan) {
   struct ce_limits l;
-  if (!ce_hw_limits(fan, &l) && !ce_hw_apply(fan, CE_MAXIMUM, l.maximum))
-    return 0;
+  if (!ce_hw_limits(fan, &l)) {
+    if (!ce_hw_apply(fan, CE_MAXIMUM, l.maximum))
+      return 0;
+    /* If target/manual control fails, try a maximum cooling floor before
+     * relinquishing to firmware. Never claim this succeeded without readback.
+     */
+    if (!ce_hw_apply(fan, CE_MINIMUM, l.maximum))
+      return 0;
+  }
   return ce_hw_release(fan);
 }
 static void tick(double elapsed) {
@@ -165,21 +173,7 @@ static int admin_peer(int fd) {
     return 0;
   if (uid == 0)
     return 1;
-  struct passwd *pw = getpwuid(uid);
-  struct group *admin = getgrnam("admin");
-  if (!pw || !admin)
-    return 0;
-  int count = 0;
-  getgrouplist(pw->pw_name, pw->pw_gid, NULL, &count);
-  if (count < 1 || count > 256)
-    return 0;
-  int groups[256];
-  if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &count) < 0)
-    return 0;
-  for (int i = 0; i < count; i++)
-    if ((gid_t)groups[i] == admin->gr_gid)
-      return 1;
-  return 0;
+  return ce_authorized_uid(uid);
 #endif
 }
 static int root_peer(int fd) {
