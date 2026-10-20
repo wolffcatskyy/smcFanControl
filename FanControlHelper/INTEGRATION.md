@@ -1,115 +1,34 @@
-# OCLP Boot Fan Daemon — Integration Guide
+# Legacy OCLP boot helper
 
-## Overview
+This is a separate, one-shot legacy minimum-speed writer. New controller development is in [Cooling CE](../Controller/README.md). Do not enable this helper alongside Cooling CE or another fan controller. A process that exits after boot can still overwrite another controller's settings at startup.
 
-This adds a LaunchDaemon that applies saved fan minimum RPM settings at boot,
-before the user logs in. This is critical for OCLP (OpenCore Legacy Patcher)
-Macs where the SMC fan controller defaults to maximum speed until software
-sets the minimum RPM.
+## Behavior and limitations
 
-## Architecture
+The launch label is `com.smcfancontrol.bootdaemon`. The executable reads `/Library/Application Support/smcFanControl/fan-settings.plist`, applies configured fan minimums, logs to `/var/log/smcfancontrold.log` and exits. It does not supervise cooling continuously or restart a stalled GUI.
 
-```
-Boot → launchd loads com.smcfancontrol.bootdaemon.plist
-     → runs /Library/Application Support/smcFanControl/smcfancontrold
-     → detects OCLP (skips if not OCLP, unless forced)
-     → reads /Library/Application Support/smcFanControl/fan-settings.plist
-     → writes F{n}Mn keys to SMC
-     → logs to /var/log/smcfancontrold.log
-     → exits
-```
+OCLP detection uses filesystem/NVRAM/boot-argument indicators. These are heuristics: OpenCore presence does not establish OCLP, and absence of an indicator does not disprove it. No support claim for every OCLP-patched Mac or cure for maximum-speed fans follows from this detection.
 
-## Files
+## Build and inspect
 
-### New files (daemon):
-- `FanControlHelper/smcfancontrold.c` — The daemon binary source
-- `FanControlHelper/OCLPDetect.h` — OCLP detection API (C header)
-- `FanControlHelper/OCLPDetect.c` — OCLP detection implementation
-- `FanControlHelper/com.smcfancontrol.bootdaemon.plist` — LaunchDaemon plist
-- `FanControlHelper/fan-settings-example.plist` — Example config
-- `FanControlHelper/Makefile` — Standalone build/install
-
-### New files (app integration):
-- `Classes/OCLPHelper.h` — Objective-C OCLP helper API
-- `Classes/OCLPHelper.m` — OCLP detection, daemon install/uninstall, settings sync
-
-### Modified files:
-- `Classes/FanControl.m` — Added OCLPHelper import, first-launch prompt, settings sync
-
-## Xcode Project Integration
-
-### 1. Add a new target for smcfancontrold
-
-1. In Xcode, File → New → Target → macOS → Command Line Tool
-2. Name: `smcfancontrold`, Language: C
-3. Add these source files to the target:
-   - `FanControlHelper/smcfancontrold.c`
-   - `FanControlHelper/OCLPDetect.c`
-   - `FanControlHelper/OCLPDetect.h`
-4. Link frameworks: `IOKit.framework`, `CoreFoundation.framework`
-5. Build Settings:
-   - `MACOSX_DEPLOYMENT_TARGET` = `10.13`
-   - `GCC_PREPROCESSOR_DEFINITIONS` = (none needed, this is standalone)
-6. Under the main app target → Build Phases → Copy Bundle Resources:
-   - Add the built `smcfancontrold` binary
-   - Add `com.smcfancontrol.bootdaemon.plist`
-7. Add a "Target Dependency" from the main app to `smcfancontrold`
-
-### 2. Add OCLPHelper to the main app target
-
-1. Add `Classes/OCLPHelper.h` and `Classes/OCLPHelper.m` to the smcFanControl target
-2. The `#import "OCLPHelper.h"` is already added to `FanControl.m`
-
-### 3. Build and test
-
-```bash
-# Build daemon standalone
+```sh
 cd FanControlHelper
 make
-
-# Test OCLP detection (dry run)
+./smcfancontrold -h
 sudo ./smcfancontrold -n
-
-# Test with force flag (non-OCLP Mac)
-sudo ./smcfancontrold -f -c fan-settings-example.plist
-
-# Full install
-sudo make install
 ```
 
-## How Settings Flow
+`-n` is a dry run: detect/read configuration without SMC writes. Options include `-c PATH` for configuration, `-f` to bypass detection, and `-q` for stderr-only logging. Combining `-f` with a configuration **without `-n` writes hardware**. The supplied settings are examples, not validated recommendations.
 
-1. User adjusts fan slider in smcFanControl.app
-2. `fanSliderChanged:` writes to SMC and saves to NSUserDefaults
-3. `[OCLPHelper syncFanSettingsWithDaemon]` writes to system-level plist
-4. On next boot, `smcfancontrold` reads that plist and applies via SMC
+The source targets a macOS SDK with IOKit/CoreFoundation. A deployment setting is not evidence that the executable runs on every older OS. Review model-specific limits, root ownership, plist contents and rollback before live use.
 
-## OCLP Detection Methods
+## Historical application integration
 
-The daemon checks four indicators (any one is sufficient):
+`Classes/OCLPHelper.{h,m}` contains installation and settings-sync logic; `FanControl.m` imports the helper. Source presence does not establish correct Xcode target membership or packaged resources. This candidate work has not rebuilt/verified the legacy app's integration.
 
-| Method | Check | Reliability |
-|--------|-------|-------------|
-| Directory | `/Library/OpenCore` exists | High — OCLP always creates this |
-| NVRAM | `opencore-version` key present | High — set by OpenCore bootloader |
-| Directory | `/Library/Application Support/Dortania` | Medium — OCLP support files |
-| Boot args | `amfi_get_out_of_my_way`, `revpatch=`, etc. | Medium — common OCLP flags |
+To integrate a reviewed legacy build, add the Objective-C helper to the app target, build `smcfancontrold` with `OCLPDetect.c` and IOKit/CoreFoundation, and copy the resulting binary and launch plist into the application resources expected by `OCLPHelper`. Verify installation and settings synchronization end to end. Do not describe this as automatic integration until that packaged build is tested.
 
-## Daemon CLI Options
+## Maintenance
 
-```
-Usage: smcfancontrold [options]
-  -c <path>   Config plist path (default: /Library/Application Support/smcFanControl/fan-settings.plist)
-  -f          Force apply even if OCLP is not detected
-  -n          Dry run (detect OCLP and read config, but don't write SMC)
-  -q          Quiet mode (no log file, stderr only)
-  -h          Show help
-```
+The standalone Makefile provides `sudo make install` and `sudo make uninstall`. Installation copies root-owned files and attempts `launchctl load`; its recipe suppresses launchctl failures, so a successful make exit is not proof that the job loaded or applied settings. It does not populate a complete model-specific settings file for you. Inspect the installed plist and logs and verify actual RPM.
 
-## Security Notes
-
-- The daemon runs as root (required for SMC writes)
-- The LaunchDaemon plist must be owned by root:wheel with 644 permissions
-- The daemon binary must be owned by root:wheel with 755 permissions
-- Installation requires admin authentication (shown via standard macOS dialog)
-- The fan-settings.plist is readable by all but only writable with admin privileges
+Uninstall leaves the settings plist in place. Stopping/removing a one-shot job does not itself undo fan minimums already written. Plan explicit firmware restoration or a deliberate controller handoff. Never remove shared application-support directories indiscriminately.

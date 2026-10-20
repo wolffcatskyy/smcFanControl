@@ -211,7 +211,7 @@ void printBytesHex(SMCVal_t val)
     int i;
 
     printf("(bytes");
-    for (i = 0; i < val.dataSize; i++)
+    for (i = 0; (UInt32)i < val.dataSize; i++)
         printf(" %02x", (unsigned char) val.bytes[i]);
     printf(")\n");
 }
@@ -291,7 +291,7 @@ kern_return_t SMCOpen(io_connect_t *conn)
     io_object_t   device;
 
     CFMutableDictionaryRef matchingDictionary = IOServiceMatching("AppleSMC");
-    result = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDictionary, &iterator);
+    result = IOServiceGetMatchingServices(MACH_PORT_NULL, matchingDictionary, &iterator);
     if (result != kIOReturnSuccess)
     {
         printf("Error: IOServiceGetMatchingServices() = %08x\n", result);
@@ -361,6 +361,7 @@ kern_return_t SMCGetKeyInfo(UInt32 key, SMCKeyData_keyInfo_t* keyInfo, io_connec
         inputStructure.data8 = SMC_CMD_READ_KEYINFO;
         
         result = SMCCall2(KERNEL_INDEX_SMC, &inputStructure, &outputStructure, conn);
+        if (result == kIOReturnSuccess && outputStructure.result != 0) result = kIOReturnError;
         if (result == kIOReturnSuccess)
         {
             *keyInfo = outputStructure.keyInfo;
@@ -389,7 +390,7 @@ kern_return_t SMCReadKey2(UInt32Char_t key, SMCVal_t *val,io_connect_t conn)
     memset(val, 0, sizeof(SMCVal_t));
     
     inputStructure.key = _strtoul(key, 4, 16);
-    sprintf(val->key, key);
+    snprintf(val->key, sizeof(val->key), "%s", key);
     
     result = SMCGetKeyInfo(inputStructure.key, &outputStructure.keyInfo, conn);
     if (result != kIOReturnSuccess)
@@ -397,6 +398,8 @@ kern_return_t SMCReadKey2(UInt32Char_t key, SMCVal_t *val,io_connect_t conn)
         return result;
     }
     
+    if (outputStructure.keyInfo.dataSize == 0 || outputStructure.keyInfo.dataSize > sizeof(val->bytes))
+        return kIOReturnError;
     val->dataSize = outputStructure.keyInfo.dataSize;
     _ultostr(val->dataType, outputStructure.keyInfo.dataType);
     inputStructure.keyInfo.dataSize = val->dataSize;
@@ -408,33 +411,10 @@ kern_return_t SMCReadKey2(UInt32Char_t key, SMCVal_t *val,io_connect_t conn)
         return result;
     }
     
+    if (outputStructure.result != 0) return kIOReturnError;
     memcpy(val->bytes, outputStructure.bytes, sizeof(outputStructure.bytes));
     
     return kIOReturnSuccess;
-}
-
-#pragma mark Command line only
-// Exclude command-line only code from smcFanControl UI
-#ifdef CMD_TOOL_BUILD
-
-io_connect_t g_conn = 0;
-
-void smc_init(){
-	SMCOpen(&g_conn);
-}
-
-void smc_close(){
-	SMCClose(g_conn);
-}
-
-kern_return_t SMCCall(int index, SMCKeyData_t *inputStructure, SMCKeyData_t *outputStructure)
-{
-    return SMCCall2(index, inputStructure, outputStructure, g_conn);
-}
-
-kern_return_t SMCReadKey(UInt32Char_t key, SMCVal_t *val)
-{
-    return SMCReadKey2(key, val, g_conn);
 }
 
 kern_return_t SMCWriteKey2(SMCVal_t writeVal, io_connect_t conn)
@@ -463,8 +443,34 @@ kern_return_t SMCWriteKey2(SMCVal_t writeVal, io_connect_t conn)
     
     if (result != kIOReturnSuccess)
         return result;
-    return kIOReturnSuccess;
+    return outputStructure.result == 0 ? kIOReturnSuccess : kIOReturnError;
 }
+
+
+#pragma mark Command line only
+// Exclude command-line only code from smcFanControl UI
+#ifdef CMD_TOOL_BUILD
+
+io_connect_t g_conn = 0;
+
+void smc_init(){
+	SMCOpen(&g_conn);
+}
+
+void smc_close(){
+	SMCClose(g_conn);
+}
+
+kern_return_t SMCCall(int index, SMCKeyData_t *inputStructure, SMCKeyData_t *outputStructure)
+{
+    return SMCCall2(index, inputStructure, outputStructure, g_conn);
+}
+
+kern_return_t SMCReadKey(UInt32Char_t key, SMCVal_t *val)
+{
+    return SMCReadKey2(key, val, g_conn);
+}
+
 
 kern_return_t SMCWriteKey(SMCVal_t writeVal)
 {
@@ -662,7 +668,7 @@ kern_return_t SMCWriteSimple(UInt32Char_t key, char *wvalue, io_connect_t conn)
         val.bytes[i] = (int) strtol(c, NULL, 16);
     }
     val.dataSize = i / 2;
-    sprintf(val.key, key);
+    snprintf(val.key, sizeof(val.key), "%s", key);
     result = SMCWriteKey2(val, conn);
     if (result != kIOReturnSuccess)
         printf("Error: SMCWriteKey() = %08x\n", result);
@@ -772,7 +778,7 @@ int main(int argc, char *argv[])
         case OP_WRITE:
             if (strlen(key) > 0)
             {
-                sprintf(val.key, key);
+                snprintf(val.key, sizeof(val.key), "%s", key);
                 result = SMCWriteKey(val);
                 if (result != kIOReturnSuccess)
                     printf("Error: SMCWriteKey() = %08x\n", result);

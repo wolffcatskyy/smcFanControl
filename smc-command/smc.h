@@ -20,7 +20,8 @@
 
 #ifndef __SMC_H__
 #define __SMC_H__
-#endif
+#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOKitLib.h>
 
 #define CMD_TOOL
 #define VERSION               "0.01"
@@ -138,3 +139,7 @@ kern_return_t SMCOpen(io_connect_t *conn);
 kern_return_t SMCClose(io_connect_t conn);
 kern_return_t SMCReadKey2(UInt32Char_t key, SMCVal_t *val,io_connect_t conn);
 
+
+kern_return_t SMCWriteKey2(SMCVal_t value, io_connect_t conn);
+
+#endif /* __SMC_H__ */

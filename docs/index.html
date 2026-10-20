@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>smcFanControl Community Edition</title>
-  <meta name="description" content="Fan control for Intel Macs. Lightweight, modern, open source.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>smcFanControl Community Edition</title>
+<meta name="description" content="Open-source fan-control software for Intel Macs, with a separately tested native controller candidate.">
   <style>
     :root {
       --accent: #2e8cb3;
@@ -254,70 +254,25 @@
       }
     }
   </style>
+<style>a { color: #62bde5; } main section { margin-bottom: 32px; } a:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }</style>
 </head>
-<body>
-  <div class="container">
-    <section class="hero">
-      <h1>smcFanControl <span>Community Edition</span></h1>
-      <p class="tagline">Fan control for Intel Macs. Lightweight, modern, open source.</p>
-      <p class="description">
-        Monitor and control the fans in your Intel Mac. Set minimum fan speeds
-        per application or create custom presets for different workloads.
-        A community-maintained fork of the classic macOS utility, rebuilt with
-        a modern interface and dramatically reduced footprint.
-      </p>
-      <a href="https://github.com/wolffcatskyy/smcFanControl/releases/latest" class="download-btn">
-        Download Latest Release
-      </a>
-      <p class="download-note">Requires macOS 10.13 or later on Intel Macs</p>
-    </section>
-
-    <section class="features">
-      <h2>What's New in the Community Edition</h2>
-      <div class="feature-grid">
-        <div class="feature-card">
-          <h3>SF Symbols Icon</h3>
-          <p>Native SF Symbol menu bar icon that blends seamlessly with modern macOS.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Dark Mode</h3>
-          <p>Full dark mode support that follows your system appearance setting.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Icon-Only Mode</h3>
-          <p>Minimal menu bar footprint. Show just the icon with no text for a cleaner look.</p>
-        </div>
-        <div class="feature-card">
-          <h3>500 KB Total</h3>
-          <p>Over 90% smaller than the original. No bloat, just fan control.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="comparison">
-      <h2>Size Comparison</h2>
-      <div class="size-bars">
-        <div class="size-row">
-          <span class="size-label">Community Edition</span>
-          <div class="size-bar community">500 KB</div>
-        </div>
-        <div class="size-row">
-          <span class="size-label">Original (2.6)</span>
-          <div class="size-bar original">5.7 MB</div>
-        </div>
-      </div>
-      <p class="size-note">Same functionality, 91% smaller</p>
-    </section>
-
-    <footer>
-      <p>
-        Licensed under <a href="https://github.com/wolffcatskyy/smcFanControl/blob/master/LICENSE">GPL v2</a><br>
-        Originally created by Hendrik Holtmann<br>
-        Community fork maintained by <a href="https://github.com/wolffcatskyy">wolffcatskyy</a>
-        &middot;
-        <a href="https://github.com/wolffcatskyy/smcFanControl">View on GitHub</a>
-      </p>
-    </footer>
-  </div>
-</body>
-</html>
+<body><main class="container">
+<section class="hero">
+<h1>smcFanControl <span>Community Edition</span></h1>
+<p class="tagline">Free, open-source fan control for Intel Macs.</p>
+<p class="description">A community fork of smcFanControl. Existing releases contain the legacy application. Cooling CE is a separate experimental native successor under review.</p>
+<a class="download-btn" href="https://github.com/wolffcatskyy/smcFanControl/releases">View legacy releases</a>
+<p class="download-note">Check the selected release's requirements and contents. Apple Silicon is outside this project's scope.</p>
+</section>
+<section><h2>Cooling CE: development candidate</h2>
+<p>A C system controller, independent C watchdog, native CLI and Objective-C/AppKit menu app. System services are configured to start at boot; the interface is optional. Policies include automatic, minimum, manual, maximum and a single-sensor curve.</p>
+<p>The candidate has been piloted on one MacPro6,1. A corrected automatic-to-maximum transition still needs its final physical test; cold boot before login, user switching, sleep/wake and other Intel models remain unverified. It is not a released replacement or a claim of commercial feature parity.</p>
+<p><a href="https://github.com/wolffcatskyy/smcFanControl/pull/38">Review draft PR #38</a> · <a href="https://github.com/wolffcatskyy/smcFanControl/blob/codex/native-controller-watchdog/Controller/README.md">Build and operation guide</a> · <a href="https://github.com/wolffcatskyy/smcFanControl/blob/codex/native-controller-watchdog/Controller/VALIDATION.md">Observed test results</a></p>
+</section>
+<section><h2>Install deliberately</h2>
+<p>Use one fan controller at a time, including boot helpers. Development builds are not notarized releases. Administrator installation changes system services; quitting or deleting the interface does not remove those services. Review the matching recovery guide before migrating.</p>
+<p>Small footprint is a design goal. No controlled comparison establishes that this app is the smallest or fastest. Neither OCLP detection nor an installed helper guarantees cooling behavior or update compatibility.</p>
+</section>
+<footer><p>GPL lineage retained. Originally created by Hendrik Holtmann.<br>
+Community fork by <a href="https://github.com/wolffcatskyy">wolffcatskyy</a> · <a href="https://github.com/wolffcatskyy/smcFanControl">Source and license</a></p></footer>
+</main></body></html>
